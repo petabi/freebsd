@@ -1552,3 +1552,26 @@ netmap_mem_deref(struct netmap_mem_d *nmd, struct netmap_adapter *na)
 	NMA_UNLOCK(nmd);
 	return nmd->deref(nmd);
 }
+
+/* Petabi: for free buffer allocation */
+uint32_t netmap_malloc_buf_list(struct netmap_mem_d *nmd, uint32_t *buf, uint32_t buf_size)
+{
+	uint32_t i;
+	uint32_t pos = 0;
+
+	for (i = 0; i < buf_size; i++) {
+		if (netmap_buf_malloc(nmd, &pos, &buf[i]) == 0)
+			break;
+	}
+
+	return i;
+}
+
+void netmap_free_buf_list(struct netmap_mem_d *nmd, uint32_t *buf, uint32_t buf_size)
+{
+	uint32_t i;
+
+	for (i = 0; i < buf_size; i++) {
+		netmap_free_buf(nmd, buf[i]);
+	}
+}

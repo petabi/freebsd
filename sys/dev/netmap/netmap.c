@@ -1744,6 +1744,9 @@ netmap_interp_ringid(struct netmap_priv_d *priv, uint16_t ringid, uint32_t flags
 			reg = NR_REG_SW;
 		} else if (ringid & NETMAP_HW_RING) {
 			reg = NR_REG_ONE_NIC;
+      /* Petabi: NR_REG_MULTI_NIC */
+      if ((i & 0xf0) != 0)
+        reg = NR_REG_MULTI_NIC;
 		} else {
 			reg = NR_REG_ALL_NIC;
 		}
@@ -1791,6 +1794,23 @@ netmap_interp_ringid(struct netmap_priv_d *priv, uint16_t ringid, uint32_t flags
 			j = 0;
 		priv->np_rxqfirst = j;
 		priv->np_rxqlast = j + 1;
+		break;
+	/* Petabi: NR_REG_MULTI_NIC */
+	case NR_REG_MULTI_NIC:
+		j = (i & 0xf0) >> 4;
+		i = i & 0x0f;
+		if (j <= i) {
+			D("invalid ring id range [%d, %d]", i, j);
+			return EINVAL;
+		}
+		if (i >= na->num_tx_rings && i >= na->num_rx_rings) {
+			D("invalid ring id %d", i);
+			return EINVAL;
+		}
+		priv->np_txqfirst = (i >= na->num_tx_rings) ? na->num_tx_rings - 1 : i;
+		priv->np_txqlast = (j > na->num_tx_rings) ? na->num_tx_rings : j;
+		priv->np_rxqfirst = (i >= na->num_rx_rings) ? na->num_rx_rings - 1: i;
+		priv->np_rxqlast = (j > na->num_rx_rings) ? na->num_rx_rings : j;
 		break;
 	default:
 		D("invalid regif type %d", reg);
@@ -2004,6 +2024,7 @@ netmap_ioctl(struct cdev *dev, u_long cmd, caddr_t data,
 	u_int i, qfirst, qlast;
 	struct netmap_if *nifp;
 	struct netmap_kring *krings;
+	uint32_t *buf_list; /* Petabi: for free buffer allocation */
 
 	(void)dev;	/* UNUSED */
 	(void)fflag;	/* UNUSED */
@@ -2207,6 +2228,44 @@ netmap_ioctl(struct cdev *dev, u_long cmd, caddr_t data,
 	case NIOCCONFIG:
 		error = netmap_bdg_config(nmr);
 		break;
+
+	/* Petabi: for free buffer allocation */
+	case NIOCGBUF:
+	case NIOCFBUF:
+		D("buf: 0x%p, size: %d", nmr->buf_addr, nmr->buf_size);
+		/* copy from NIOCRXSYNC */
+		nifp = priv->np_nifp;
+
+		if (nifp == NULL) {
+			error = ENXIO;
+			break;
+		}
+		rmb(); /* make sure following reads are not from cache */
+
+		na = priv->np_na;      /* we have a reference */
+
+		buf_list = malloc(sizeof(uint32_t) * nmr->buf_size,
+				  M_DEVBUF, M_NOWAIT | M_ZERO);
+		if (cmd == NIOCGBUF) {
+			nmr->buf_size = netmap_malloc_buf_list(na->nm_mem, buf_list, nmr->buf_size);
+			/* error = copy_to_user(nmr->buf_addr, buf_list, */
+			/*                      sizeof(uint32_t) * nmr->buf_size); */
+			error = copyout(buf_list, nmr->buf_addr,
+					sizeof(uint32_t) * nmr->buf_size);
+
+		} else if (cmd == NIOCFBUF) {
+			/* error = copy_from_user(buf_list, nmr->buf_addr, */
+			/*                        sizeof(uint32_t) * nmr->buf_size); */
+
+			error = copyin(nmr->buf_addr, buf_list,
+				       sizeof(uint32_t) * nmr->buf_size);
+
+			netmap_free_buf_list(na->nm_mem, buf_list, nmr->buf_size);
+		}
+
+		free(buf_list, M_DEVBUF);
+		break;
+
 #ifdef __FreeBSD__
 	case FIONBIO:
 	case FIOASYNC:
