@@ -506,9 +506,9 @@ struct nmreq {
 	/* various modes, extends nr_ringid */
 	uint32_t	spare2[1];
 
- /* Petabi: for free buffer allocation */
-  uint32_t *buf_addr;
-  uint32_t  buf_size;
+	/* Petabi: for free buffer allocation */
+	uint32_t *buf_addr;
+	uint32_t  buf_size;
 };
 
 #define NR_REG_MASK		0xf /* values for nr_flags */
@@ -519,7 +519,7 @@ enum {	NR_REG_DEFAULT	= 0,	/* backward compat, should not be used. */
 	NR_REG_ONE_NIC	= 4,
 	NR_REG_PIPE_MASTER = 5,
 	NR_REG_PIPE_SLAVE = 6,
-  NR_REG_MULTI_NIC = 7, /* Petabi: NR_REG_MULTI_NIC */
+	NR_REG_MULTI_NIC = 7, /* Petabi: NR_REG_MULTI_NIC */
 };
 /* monitor uses the NR_REG to select the rings to monitor */
 #define NR_MONITOR_TX	0x100
@@ -537,8 +537,8 @@ enum {	NR_REG_DEFAULT	= 0,	/* backward compat, should not be used. */
 #define NIOCTXSYNC	_IO('i', 148) /* sync tx queues */
 #define NIOCRXSYNC	_IO('i', 149) /* sync rx queues */
 /* Petabi: for free buffer allocation */
-#define NIOCGBUF  _IOWR('i', 150, struct nmreq)
-#define NIOCFBUF  _IOWR('i', 151, struct nmreq)
+#define NIOCGBUF	_IOWR('i', 150, struct nmreq)
+#define NIOCFBUF	_IOWR('i', 151, struct nmreq)
 #endif /* !NIOCREGIF */
 
 
