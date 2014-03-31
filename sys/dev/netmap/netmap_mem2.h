@@ -24,7 +24,7 @@
  */
 
 /*
- * $FreeBSD$
+ * $FreeBSD: stable/10/sys/dev/netmap/netmap_mem2.h 262152 2014-02-18 05:46:19Z luigi $
  *
  * (New) memory allocator for netmap
  */
@@ -218,6 +218,10 @@ struct netmap_mem_d* netmap_mem_private_new(const char *name,
 	u_int txr, u_int txd, u_int rxr, u_int rxd, u_int extra_bufs, u_int npipes,
 	int* error);
 void	   netmap_mem_private_delete(struct netmap_mem_d *);
+
+/* Petabi extension */
+uint32_t netmap_malloc_buf_list(struct netmap_mem_d *nm_mem, uint32_t *buf, uint32_t buf_size);
+void netmap_free_buf_list(struct netmap_mem_d *nm_mem, uint32_t *buf, uint32_t buf_size);
 
 #define NETMAP_BDG_BUF_SIZE(n)	((n)->pools[NETMAP_BUF_POOL]._objsize)
 
