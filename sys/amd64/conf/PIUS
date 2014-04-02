@@ -1,0 +1,6 @@
+# PIUS -- kernel config for pius
+
+include		GENERIC
+ident		PIUS
+
+device          netmap
