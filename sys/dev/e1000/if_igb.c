@@ -342,6 +342,12 @@ SYSCTL_INT(_hw_igb, OID_AUTO, tx_process_limit, CTLFLAG_RDTUN,
     &igb_tx_process_limit, 0,
     "Maximum number of sent packets to process at a time, -1 means unlimited");
 
+/* Petabi: Symmetric Rss enable variable, default disable */
+static int igb_enable_symmetric_rss = FALSE;
+TUNABLE_INT("hw.igb.enable_symmetric_rss", &igb_enable_symmetric_rss);
+SYSCTL_INT(_hw_igb, OID_AUTO, enable_symmetric_rss, CTLFLAG_RDTUN, &igb_enable_symmetric_rss, 0,
+    "Enable Symmetric Rss Hashing");
+
 #ifdef DEV_NETMAP	/* see ixgbe.c for details */
 #include <dev/netmap/if_igb_netmap.h>
 #endif /* DEV_NETMAP */
@@ -4621,6 +4627,11 @@ igb_initialise_rss_mapping(struct adapter *adapter)
 	arc4rand(&rss_key, sizeof(rss_key), 0);
 #endif
 	for (i = 0; i < 10; i++)
+	    /* petabi */
+	    if (igb_enable_symmetric_rss)
+		E1000_WRITE_REG_ARRAY(hw,
+		    E1000_RSSRK(0), i, 0x6d5a6d5a);
+	    else
 		E1000_WRITE_REG_ARRAY(hw,
 		    E1000_RSSRK(0), i, rss_key[i]);
 
