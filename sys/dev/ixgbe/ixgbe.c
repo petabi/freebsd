@@ -360,6 +360,12 @@ static int atr_sample_rate = 20;
 static int fdir_pballoc = 1;
 #endif
 
+/* Petabi: Symmetric Rss enable variable, default disable */
+static int ixgbe_enable_symmetric_rss = TRUE;
+TUNABLE_INT("hw.ixgbe.enable_symmetric_rss", &ixgbe_enable_symmetric_rss);
+SYSCTL_INT(_hw_ix, OID_AUTO, enable_symmetric_rss, CTLFLAG_RDTUN, &ixgbe_enable_symmetric_rss, 1,
+    "Enable Symmetric Rss Hashing");
+
 #ifdef DEV_NETMAP
 /*
  * The #ifdef DEV_NETMAP / #endif blocks in this file are meant to
@@ -4242,6 +4248,10 @@ ixgbe_initialize_receive_units(struct adapter *adapter)
 
 		/* Now fill our hash function seeds */
 		for (int i = 0; i < 10; i++)
+		  /* Petabi */
+		  if (ixgbe_enable_symmetric_rss)
+			IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), 0x6d5a6d5a);
+		  else
 			IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), random[i]);
 
 		/* Perform hash on these packet types */
