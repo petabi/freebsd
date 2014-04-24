@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/10/tools/tools/nanobsd/nanobsd.sh 250036 2013-04-28 22:12:40Z n_hibma $
 #
 
 set -e
@@ -186,6 +186,7 @@ if $do_image ; then
 else
 	pprint 2 "Skipping image build (as instructed)"
 fi
+#run_customize
 last_orders
 
 pprint 1 "NanoBSD image ${NANO_NAME} completed"
