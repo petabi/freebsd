@@ -597,6 +597,8 @@ setup_nanobsd_etc ( ) (
 
 	echo "/dev/${NANO_DRIVE}${NANO_ROOT} / ufs ro 1 1" > etc/fstab
 	echo "/dev/${NANO_DRIVE}${NANO_SLICE_CFG} /cfg ufs rw,noauto 2 2" >> etc/fstab
+	# Petabi mount data to /mnt as rw
+	echo "/dev/${NANO_DRIVE}${NANO_SLICE_DATA} ${DATA_MOUNT_POINT} ufs rw 2 2" >> etc/fstab
 	mkdir -p cfg
 	)
 )
@@ -767,7 +769,8 @@ create_diskimage ( ) (
 	if [ $NANO_IMAGES -gt 1 -a $NANO_INIT_IMG2 -gt 0 ] ; then
 		# Duplicate to second image (if present)
 		echo "Duplicating to second image..."
-		dd conv=sparse if=/dev/${MD}${NANO_SLICE_ROOT} of=/dev/${MD}${NANO_SLICE_ALTROOT} bs=64k
+		# dd conv=sparse if=/dev/${MD}${NANO_SLICE_ROOT} of=/dev/${MD}${NANO_SLICE_ALTROOT} bs=64k
+		dd if=/dev/${MD}${NANO_SLICE_ROOT} of=/dev/${MD}${NANO_SLICE_ALTROOT} bs=64k
 		mount /dev/${MD}${NANO_ALTROOT} ${MNT}
 		for f in ${MNT}/etc/fstab ${MNT}/conf/base/etc/fstab
 		do
@@ -781,9 +784,11 @@ create_diskimage ( ) (
 		fi
 	fi
 
+	echo "create config slice"
 	# Create Config slice
 	populate_cfg_slice /dev/${MD}${NANO_SLICE_CFG} "${NANO_CFGDIR}" ${MNT} "${NANO_SLICE_CFG}"
 
+	echo "create data slice"
 	# Create Data slice, if any.
 	if [ -n "$NANO_SLICE_DATA" -a "$NANO_SLICE_CFG" = "$NANO_SLICE_DATA" -a \
 	   "$NANO_DATASIZE" -ne 0 ]; then
@@ -793,6 +798,15 @@ create_diskimage ( ) (
 	if [ $NANO_DATASIZE -ne 0 -a -n "$NANO_SLICE_DATA" ] ; then
 		populate_data_slice /dev/${MD}${NANO_SLICE_DATA} "${NANO_DATADIR}" ${MNT} "${NANO_SLICE_DATA}"
 	fi
+	#Petabi
+	#copy data to data image
+	mount /dev/${MD}${NANO_SLICE_DATA} ${MNT}
+        #	cd ${MNT} # must cd .. out, otherwise wouldn't be able to umount
+	touch ${MNT}/testing
+	echo "succeed" > ${MNT}/testing
+	echo "writing out s4"
+        #	cd ..
+	umount ${MNT}
 
 	if [ "${NANO_MD_BACKING}" = "swap" ] ; then
 		if [ ${NANO_IMAGE_MBRONLY} ]; then
