@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
+# $FreeBSD: stable/10/tools/tools/nanobsd/nanobsd.sh 250036 2013-04-28 22:12:40Z n_hibma $
 #
 
 set -e
@@ -423,6 +423,8 @@ setup_nanobsd_etc ( ) (
 
 	echo "/dev/${NANO_DRIVE}s1a / ufs ro 1 1" > etc/fstab
 	echo "/dev/${NANO_DRIVE}s3 /cfg ufs rw,noauto 2 2" >> etc/fstab
+	# Petabi mount data to /mnt as rw
+	echo "/dev/${NANO_DRIVE}s4 ${DATA_MOUNT_POINT} ufs rw 2 2" >> etc/fstab
 	mkdir -p cfg
 	)
 )
@@ -560,18 +562,21 @@ create_i386_diskimage ( ) (
 			-y ${NANO_HEADS}`
 	else
 		echo "Creating md backing file..."
+		echo ${IMG}
 		rm -f ${IMG}
 		dd if=/dev/zero of=${IMG} seek=${NANO_MEDIASIZE} count=0
 		MD=`mdconfig -a -t vnode -f ${IMG} -x ${NANO_SECTS} \
 			-y ${NANO_HEADS}`
+#		echo ${IMG} ${NANO_SECTS} ${NANO_HEADS}
 	fi
 
 	trap "echo 'Running exit trap code' ; df -i ${MNT} ; nano_umount ${MNT} || true ; mdconfig -d -u $MD" 1 2 15 EXIT
+#	echo ${MD}
 
 	fdisk -i -f ${NANO_OBJ}/_.fdisk ${MD}
 	fdisk ${MD}
 	# XXX: params
-	# XXX: pick up cached boot* files, they may not be in image anymore.
+	# XXX: pick up cached boot* files, they may not be in image anymore.0
 	boot0cfg -B -b ${NANO_WORLDDIR}/${NANO_BOOTLOADER} ${NANO_BOOT0CFG} ${MD}
 	bsdlabel -w -B -b ${NANO_WORLDDIR}/boot/boot ${MD}s1
 	bsdlabel ${MD}s1
@@ -587,7 +592,8 @@ create_i386_diskimage ( ) (
 	if [ $NANO_IMAGES -gt 1 -a $NANO_INIT_IMG2 -gt 0 ] ; then
 		# Duplicate to second image (if present)
 		echo "Duplicating to second image..."
-		dd conv=sparse if=/dev/${MD}s1 of=/dev/${MD}s2 bs=64k
+#		dd conv=sparse if=/dev/${MD}s1 of=/dev/${MD}s2 bs=64k
+		dd bs=64K if=/dev/${MD}s1 of=/dev/${MD}s2
 		mount /dev/${MD}s2a ${MNT}
 		for f in ${MNT}/etc/fstab ${MNT}/conf/base/etc/fstab
 		do
@@ -601,14 +607,25 @@ create_i386_diskimage ( ) (
 		fi
 	fi
 	
+	echo "create config slice"
 	# Create Config slice
 	populate_cfg_slice /dev/${MD}s3 "${NANO_CFGDIR}" ${MNT} "s3"
 
+	echo "create data slice"
 	# Create Data slice, if any.
 	if [ $NANO_DATASIZE -ne 0 ] ; then
 		populate_data_slice /dev/${MD}s4 "${NANO_DATADIR}" ${MNT} "s4"
 	fi
-
+	#Petabi
+	#copy data to data image
+	mount /dev/${MD}s4 ${MNT}
+#	cd ${MNT} # must cd .. out, otherwise wouldn't be able to umount
+	touch ${MNT}/testing
+	echo "succeed" > ${MNT}/testing
+	echo "writing out s4"
+#	cd ..
+	umount ${MNT}
+	
 	if [ "${NANO_MD_BACKING}" = "swap" ] ; then
 		if [ ${NANO_IMAGE_MBRONLY} ]; then
 			echo "Writing out _.disk.mbr..."
@@ -766,9 +783,9 @@ cust_pkg () (
 		have=`ls ${NANO_WORLDDIR}/${NANO_PKG_META_BASE}/pkg | wc -l`
 
 		# Attempt to install more packages
-		# ...but no more than 200 at a time due to pkg_add's internal
+		# ...but no more than 200 at a time due to pkg add's internal
 		# limitations.
-		CR0 'ls Pkg/*tbz | xargs -n 200 env PKG_DBDIR='${NANO_PKG_META_BASE}'/pkg pkg_add -v -F'
+		CR0 'ls Pkg/* | xargs -n 200 env PKG_DBDIR='${NANO_PKG_META_BASE}'/pkg pkg_add -v -F'
 
 		# See what that got us
 		now=`ls ${NANO_WORLDDIR}/${NANO_PKG_META_BASE}/pkg | wc -l`
@@ -983,7 +1000,8 @@ trap nano_cleanup EXIT
 #######################################################################
 # Setup and Export Internal variables
 #
-test -n "${NANO_OBJ}" || NANO_OBJ=/usr/obj/nanobsd.${NANO_NAME}/
+#test -n "${NANO_OBJ}" || NANO_OBJ=/usr/obj/nanobsd.${NANO_NAME}/
+test -n "${NANO_OBJ}" || NANO_OBJ=/usr/obj/nanobsd.${NANO_NAME}
 test -n "${MAKEOBJDIRPREFIX}" || MAKEOBJDIRPREFIX=${NANO_OBJ}
 test -n "${NANO_DISKIMGDIR}" || NANO_DISKIMGDIR=${NANO_OBJ}
 
@@ -1085,6 +1103,7 @@ if $do_image ; then
 else
 	pprint 2 "Skipping image build (as instructed)"
 fi
+#run_customize
 last_orders
 
 pprint 1 "NanoBSD image ${NANO_NAME} completed"
