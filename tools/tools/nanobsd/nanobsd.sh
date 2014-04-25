@@ -592,7 +592,9 @@ create_i386_diskimage ( ) (
 	if [ $NANO_IMAGES -gt 1 -a $NANO_INIT_IMG2 -gt 0 ] ; then
 		# Duplicate to second image (if present)
 		echo "Duplicating to second image..."
-#		dd conv=sparse if=/dev/${MD}s1 of=/dev/${MD}s2 bs=64k
+		# Petabi, bs=64k must be placed right after dd, 
+		# otherwise it gets 'invalid argument' error
+		# dd conv=sparse if=/dev/${MD}s1 of=/dev/${MD}s2 bs=64k
 		dd bs=64K if=/dev/${MD}s1 of=/dev/${MD}s2
 		mount /dev/${MD}s2a ${MNT}
 		for f in ${MNT}/etc/fstab ${MNT}/conf/base/etc/fstab
@@ -607,7 +609,6 @@ create_i386_diskimage ( ) (
 		fi
 	fi
 	
-	echo "create config slice"
 	# Create Config slice
 	populate_cfg_slice /dev/${MD}s3 "${NANO_CFGDIR}" ${MNT} "s3"
 
@@ -616,15 +617,6 @@ create_i386_diskimage ( ) (
 	if [ $NANO_DATASIZE -ne 0 ] ; then
 		populate_data_slice /dev/${MD}s4 "${NANO_DATADIR}" ${MNT} "s4"
 	fi
-	#Petabi
-	#copy data to data image
-	mount /dev/${MD}s4 ${MNT}
-#	cd ${MNT} # must cd .. out, otherwise wouldn't be able to umount
-	touch ${MNT}/testing
-	echo "succeed" > ${MNT}/testing
-	echo "writing out s4"
-#	cd ..
-	umount ${MNT}
 	
 	if [ "${NANO_MD_BACKING}" = "swap" ] ; then
 		if [ ${NANO_IMAGE_MBRONLY} ]; then
