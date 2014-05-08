@@ -4254,7 +4254,7 @@ ixgbe_initialize_receive_units(struct adapter *adapter)
 		for (int i = 0; i < 10; i++)
 		  /* Petabi */
 		  if (ixgbe_enable_symmetric_rss)
-		  	IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), 0x6d5a6d5a);
+			IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), 0x6d5a6d5a);
 		  else
 			IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), random[i]);
 
