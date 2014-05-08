@@ -361,10 +361,14 @@ static int fdir_pballoc = 1;
 #endif
 
 /* Petabi: Symmetric Rss enable variable, default disable */
-static int ixgbe_enable_symmetric_rss = TRUE;
+static int ixgbe_enable_symmetric_rss = FALSE;
 TUNABLE_INT("hw.ixgbe.enable_symmetric_rss", &ixgbe_enable_symmetric_rss);
-SYSCTL_INT(_hw_ix, OID_AUTO, enable_symmetric_rss, CTLFLAG_RDTUN, &ixgbe_enable_symmetric_rss, 1,
+SYSCTL_INT(_hw_ix, OID_AUTO, enable_symmetric_rss, CTLFLAG_RDTUN, &ixgbe_enable_symmetric_rss, 0,
     "Enable Symmetric Rss Hashing");
+/* Petabi: explicitly define DEV_NETMAP, otherwise netmap is disabled by default */
+#ifndef DEV_NETMAP
+#define DEV_NETMAP
+#endif
 
 #ifdef DEV_NETMAP
 /*
@@ -4237,7 +4241,7 @@ ixgbe_initialize_receive_units(struct adapter *adapter)
 		for (int i = 0; i < 10; i++)
 		  /* Petabi */
 		  if (ixgbe_enable_symmetric_rss)
-			IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), 0x6d5a6d5a);
+		  	IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), 0x6d5a6d5a);
 		  else
 			IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), random[i]);
 
@@ -4428,9 +4432,11 @@ ixgbe_rxeof(struct ix_queue *que)
 	struct ixgbe_rx_buf	*rbuf, *nbuf;
 
 	IXGBE_RX_LOCK(rxr);
+	/* device_printf(adapter->dev, "ixgbe_rxeof rxringid %d\n", rxr->me); */
 
 #ifdef DEV_NETMAP
 	/* Same as the txeof routine: wakeup clients on intr. */
+	/* device_printf(adapter->dev, "ixgbe_rxeof netmap rxringid %d\n", rxr->me); */
 	if (netmap_rx_irq(ifp, rxr->me, &processed)) {
 		IXGBE_RX_UNLOCK(rxr);
 		return (FALSE);
