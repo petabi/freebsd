@@ -370,10 +370,6 @@ static int ixgbe_enable_symmetric_rss = FALSE;
 TUNABLE_INT("hw.ixgbe.enable_symmetric_rss", &ixgbe_enable_symmetric_rss);
 SYSCTL_INT(_hw_ix, OID_AUTO, enable_symmetric_rss, CTLFLAG_RDTUN, &ixgbe_enable_symmetric_rss, 0,
            "Enable Symmetric Rss Hashing");
-/* Petabi: explicitly define DEV_NETMAP, otherwise netmap is disabled by default */
-#ifndef DEV_NETMAP
-#define DEV_NETMAP
-#endif
 
 #ifdef DEV_NETMAP
 /*
