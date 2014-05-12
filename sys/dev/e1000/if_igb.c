@@ -413,10 +413,6 @@ static int igb_enable_symmetric_rss = FALSE;
 TUNABLE_INT("hw.igb.enable_symmetric_rss", &igb_enable_symmetric_rss);
 SYSCTL_INT(_hw_igb, OID_AUTO, enable_symmetric_rss, CTLFLAG_RDTUN, &igb_enable_symmetric_rss, 0,
     "Enable Symmetric Rss Hashing");
-/* Petabi: Explicitly define DEV_NETMAP */
-#ifndef DEV_NETMAP
-#define DEV_NETMAP
-#endif
 
 #ifdef DEV_NETMAP	/* see ixgbe.c for details */
 #include <dev/netmap/if_igb_netmap.h>
