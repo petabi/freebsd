@@ -21,4 +21,8 @@ CFLAGS += -I${.CURDIR}/../../dev/e1000 -DSMP
 # ALTQ. 
 #CFLAGS  += -DIGB_LEGACY_TX
 
+.if defined(DEV_NETMAP)
+CFLAGS+= -DDEV_NETMAP
+.endif
+
 .include <bsd.kmod.mk>

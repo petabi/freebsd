@@ -12,4 +12,8 @@ SRCS    += ixgbe_dcb.c ixgbe_dcb_82598.c ixgbe_dcb_82599.c
 SRCS    += ixgbe_82598.c ixgbe_82599.c ixgbe_x540.c ixgbe_x550.c
 CFLAGS+= -I${.CURDIR}/../../dev/ixgbe -DSMP
 
+.if defined(DEV_NETMAP)
+CFLAGS+= -DDEV_NETMAP
+.endif
+
 .include <bsd.kmod.mk>
