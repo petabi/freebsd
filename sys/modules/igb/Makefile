@@ -23,6 +23,10 @@ CFLAGS += -I${.CURDIR}/../../dev/e1000 -DSMP
 # ALTQ. 
 #CFLAGS  += -DIGB_LEGACY_TX
 
+.if defined(DEV_NETMAP)
+CFLAGS+= -DDEV_NETMAP
+.endif
+
 .if !defined(KERNBUILDDIR)
 .if ${MK_INET_SUPPORT} != "no"
 opt_inet.h:

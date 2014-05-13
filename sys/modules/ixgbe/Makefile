@@ -14,6 +14,10 @@ SRCS    += ixgbe_dcb.c ixgbe_dcb_82598.c ixgbe_dcb_82599.c
 SRCS    += ixgbe_82599.c ixgbe_82598.c ixgbe_x540.c
 CFLAGS+= -I${.CURDIR}/../../dev/ixgbe -DSMP
 
+.if defined(DEV_NETMAP)
+CFLAGS+= -DDEV_NETMAP
+.endif
+
 .if !defined(KERNBUILDDIR)
 .if ${MK_INET_SUPPORT} != "no"
 opt_inet.h:
