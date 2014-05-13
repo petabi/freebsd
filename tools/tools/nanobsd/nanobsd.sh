@@ -794,9 +794,9 @@ cust_pkg () (
 		have=`ls ${NANO_WORLDDIR}/${NANO_PKG_META_BASE}/pkg | wc -l`
 
 		# Attempt to install more packages
-		# ...but no more than 200 at a time due to pkg add's internal
+		# ...but no more than 200 at a time due to pkg_add's internal
 		# limitations.
-		CR0 'ls Pkg/* | xargs -n 200 env PKG_DBDIR='${NANO_PKG_META_BASE}'/pkg pkg_add -v -F'
+		CR0 'ls Pkg/*tbz | xargs -n 200 env PKG_DBDIR='${NANO_PKG_META_BASE}'/pkg pkg_add -v -F'
 
 		# See what that got us
 		now=`ls ${NANO_WORLDDIR}/${NANO_PKG_META_BASE}/pkg | wc -l`
@@ -1131,7 +1131,6 @@ if $do_image ; then
 else
 	pprint 2 "Skipping image build (as instructed)"
 fi
-
 last_orders
 
 pprint 1 "NanoBSD image ${NANO_NAME} completed"
