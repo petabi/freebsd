@@ -10,6 +10,3 @@ make_install_nic_driver_w_netmap()
 
 make_install_nic_driver_w_netmap "ixgbe"
 make_install_nic_driver_w_netmap "igb"
-
-
-
