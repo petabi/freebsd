@@ -124,10 +124,10 @@ NANO_CONFSIZE=2048
 NANO_DATASIZE=0
 
 # Size of the /etc ramdisk in 512 bytes sectors
-NANO_RAM_ETCSIZE=10240
+NANO_RAM_ETCSIZE=102400
 
 # Size of the /tmp+/var ramdisk in 512 bytes sectors
-NANO_RAM_TMPVARSIZE=10240
+NANO_RAM_TMPVARSIZE=102400
 
 # Media geometry, only relevant if bios doesn't understand LBA.
 NANO_SECTS=63
