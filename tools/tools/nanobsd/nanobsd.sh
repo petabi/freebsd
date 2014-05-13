@@ -587,11 +587,9 @@ create_diskimage ( ) (
 		dd if=/dev/zero of=${IMG} seek=${NANO_MEDIASIZE} count=0
 		MD=`mdconfig -a -t vnode -f ${IMG} -x ${NANO_SECTS} \
 			-y ${NANO_HEADS}`
-#		echo ${IMG} ${NANO_SECTS} ${NANO_HEADS}
 	fi
 
 	trap "echo 'Running exit trap code' ; df -i ${MNT} ; nano_umount ${MNT} || true ; mdconfig -d -u $MD" 1 2 15 EXIT
-#	echo ${MD}
 
 	fdisk -i -f ${NANO_OBJ}/_.fdisk ${MD}
 	fdisk ${MD}
@@ -618,7 +616,7 @@ create_diskimage ( ) (
 	if [ $NANO_IMAGES -gt 1 -a $NANO_INIT_IMG2 -gt 0 ] ; then
 		# Duplicate to second image (if present)
 		echo "Duplicating to second image..."
-		# Petabi, bs=64k must be placed right after dd, 
+		# Petabi, bs=64k must be placed right after dd,
 		# otherwise it gets 'invalid argument' error
 		# dd conv=sparse if=/dev/${MD}s1 of=/dev/${MD}s2 bs=64k
 		dd bs=64K if=/dev/${MD}s1 of=/dev/${MD}s2
@@ -1133,7 +1131,7 @@ if $do_image ; then
 else
 	pprint 2 "Skipping image build (as instructed)"
 fi
-#run_customize
+
 last_orders
 
 pprint 1 "NanoBSD image ${NANO_NAME} completed"
