@@ -614,7 +614,7 @@ create_i386_diskimage ( ) (
 	if [ $NANO_DATASIZE -ne 0 ] ; then
 		populate_data_slice /dev/${MD}s4 "${NANO_DATADIR}" ${MNT} "s4"
 	fi
-	
+
 	if [ "${NANO_MD_BACKING}" = "swap" ] ; then
 		if [ ${NANO_IMAGE_MBRONLY} ]; then
 			echo "Writing out _.disk.mbr..."
