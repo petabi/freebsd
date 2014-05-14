@@ -2313,7 +2313,6 @@ netmap_ioctl(struct cdev *dev, u_long cmd, caddr_t data,
 	/* Petabi: for free buffer allocation */
 	case NIOCGBUF:
 	case NIOCFBUF:
-		D("buf: 0x%p, size: %d", nmr->buf_addr, nmr->buf_size);
 		/* copy from NIOCRXSYNC */
 		nifp = priv->np_nifp;
 

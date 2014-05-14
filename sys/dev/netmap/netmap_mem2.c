@@ -1602,7 +1602,11 @@ netmap_mem_global_deref(struct netmap_mem_d *nmd)
 
 	nmd->active--;
 	if (!nmd->active)
+	{
+		/* Petabi: reset netmap memory allocator when refcount becomes zero */
+		netmap_mem_reset_all(nmd);
 		nmd->nm_grp = -1;
+	}
 	if (netmap_verbose)
 		D("active = %d", nmd->active);
 
