@@ -1358,6 +1358,9 @@ netmap_mem_global_deref(struct netmap_mem_d *nmd)
 	NMA_LOCK(nmd);
 
 	nmd->refcount--;
+	/* Petabi: reset netmap memory allocator when refcount becomes zero */
+	if (nmd->refcount <= 0)
+		netmap_mem_reset_all(nmd);
 	if (netmap_verbose)
 		D("refcount = %d", nmd->refcount);
 
