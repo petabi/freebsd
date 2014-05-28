@@ -361,7 +361,7 @@ nm_open(const char *ifname, const struct nmreq *req,
 	if (ifname[0] == 'n')
 		ifname += 7;
 	/* scan for a separator */
-	for (port = ifname; *port && !index("-*^{}", *port); port++)
+	for (port = ifname; *port && !index("-+*^{}", *port); port++)
 		;
 	namelen = port - ifname;
 	if (namelen >= sizeof(d->req.nr_name)) {
