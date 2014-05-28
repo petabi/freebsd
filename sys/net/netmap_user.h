@@ -377,6 +377,11 @@ nm_open(const char *ifname, const struct nmreq *req,
 		nr_flags = NR_REG_ONE_NIC;
 		nr_ringid = atoi(port + 1);
 		break;
+	/* Petabi: NR_REG_MULTI_NIC */
+	case '+': /* one NIC */
+		nr_flags = NR_REG_MULTI_NIC;
+		nr_ringid = atoi(port + 1);
+		break;
 	case '*': /* NIC and SW, ignore port */
 		nr_flags = NR_REG_NIC_SW;
 		if (port[1]) {
@@ -512,6 +517,11 @@ nm_open(const char *ifname, const struct nmreq *req,
 		/* XXX check validity */
 		d->first_tx_ring = d->last_tx_ring =
 		d->first_rx_ring = d->last_rx_ring = d->req.nr_ringid & NETMAP_RING_MASK;
+	} else if (nr_flags == NR_REG_MULTI_NIC) {
+		/* Petabi: NR_REG_MULTI_NIC */
+		/* XXX check validity */
+		d->first_tx_ring = d->first_rx_ring = d->req.nr_ringid & 0x0f;
+		d->last_tx_ring = d->last_rx_ring = ((d->req.nr_ringid & 0xf0) >> 4) - 1;
 	} else { /* pipes */
 		d->first_tx_ring = d->last_tx_ring = 0;
 		d->first_rx_ring = d->last_rx_ring = 0;
