@@ -376,8 +376,7 @@ nm_open(const char *ifname, const struct nmreq *req,
 		nr_flags = NR_REG_ONE_NIC;
 		nr_ringid = atoi(port + 1);
 		break;
-	/* Petabi: NR_REG_MULTI_NIC */
-	case '+': /* one NIC */
+	case '+': /* Petabi: NR_REG_MULTI_NIC */
 		nr_flags = NR_REG_MULTI_NIC;
 		nr_ringid = atoi(port + 1);
 		break;
