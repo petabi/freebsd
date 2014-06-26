@@ -379,6 +379,12 @@ TUNABLE_INT("hw.ixgbe.enable_symmetric_rss", &ixgbe_enable_symmetric_rss);
 SYSCTL_INT(_hw_ix, OID_AUTO, enable_symmetric_rss, CTLFLAG_RDTUN, &ixgbe_enable_symmetric_rss, 0,
            "Enable Symmetric Rss Hashing");
 
+/* Petabi: Configure redirection table */
+static int ixgbe_redirection = -1;
+TUNABLE_INT("hw.ixgbe.redirection", &ixgbe_redirection);
+SYSCTL_INT(_hw_ix, OID_AUTO, redirection, CTLFLAG_RDTUN, &ixgbe_redirection, -1,
+           "Configure redirection table entry");
+
 #ifdef DEV_NETMAP
 /*
  * The #ifdef DEV_NETMAP / #endif blocks in this file are meant to
@@ -3148,6 +3154,10 @@ ixgbe_initialize_rss_mapping(struct adapter *adapter)
 #else
 		queue_id = (j * index_mult);
 #endif
+		/* Petabi */
+		if (ixgbe_redirection >= 0 &&
+		    ixgbe_redirection < adapter->num_queues)
+			j = ixgbe_redirection;
 		/*
 		 * The low 8 bits are for hash value (n+0);
 		 * The next 8 bits are for hash value (n+1), etc.
