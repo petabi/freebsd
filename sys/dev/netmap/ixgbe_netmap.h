@@ -394,6 +394,8 @@ ixgbe_netmap_rxsync(struct netmap_adapter *na, u_int ring_nr, int flags)
 				break;
 			ring->slot[nm_i].len = le16toh(curr->wb.upper.length) - crclen;
 			ring->slot[nm_i].flags = slot_flags;
+			/* Petabi: copy hash value */
+			ring->slot[nm_i].ptr = le32toh(curr->wb.lower.hi_dword.rss);
 			bus_dmamap_sync(rxr->ptag,
 			    rxr->rx_buffers[nic_i].pmap, BUS_DMASYNC_POSTREAD);
 			nm_i = nm_next(nm_i, lim);
