@@ -11,9 +11,6 @@ stop_cmd="${name}_stop"
 
 install_pkg_start()
 {
-    echo "install_pkg_start"
-    echo "install_pkg_start"
-    echo "install_pkg_start"
     mkdir -p /mnt/db/pkg
     mkdir -p /mnt/cache/pkg
     rm -rf /var/cache/pkg	
@@ -32,27 +29,10 @@ install_pkg_start()
 	cp /cfg/pius-conf.lua.sample /usr/local/etc/pius-conf.lua.sample
     fi		
     umount /cfg	
-    # else
-    # 	    mount -uw /
-    # 	    # mkdir -p /mnt/pkg
-    # 	    # restore pkg database
-    # 	    # cp -Rp /mnt/pkg /var/db
-    # 	    env ASSUME_ALWAYS_YES=YES pkg bootstrap
-    # 	    pkg install -y mregex
-    # 	    pkg install -y session
-    # 	    pkg install -y pius
-    # 	    mount -ur /
-    # fi
-    # save pkg database
-    # cp -Rp /var/db/pkg /mnt/
 }
 
 install_pkg_stop()
 {
-    echo "install_pkg_stop"
-    echo "install_pkg_stop"
-    echo "install_pkg_stop"
-
     mount /cfg
     if [ -s /usr/local/etc/rc.d/pius ]; then
     	cp /usr/local/etc/rc.d/pius /cfg
