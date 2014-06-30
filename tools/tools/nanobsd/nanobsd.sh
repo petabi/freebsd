@@ -24,7 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/10/tools/tools/nanobsd/nanobsd.sh 250036 2013-04-28 22:12:40Z n_hibma $
+# $FreeBSD: 10v2-RELEASE 2014-06-30 QingChang$
 #
 
 set -e
