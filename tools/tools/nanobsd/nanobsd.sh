@@ -111,7 +111,8 @@ NANO_CODESIZE=0
 
 # Size of configuration file system in 512 bytes sectors
 # Cannot be zero.
-NANO_CONFSIZE=2048
+#NANO_CONFSIZE=2048
+NANO_CONFSIZE=102400
 
 # Size of data file system in 512 bytes sectors
 # If zero: no partition configured.
@@ -165,7 +166,9 @@ NANO_ARCH=`uname -p`
 NANO_CFGDIR=""
 
 # Directory to populate /data from
-NANO_DATADIR=""
+NANO_DATADIR=/usr/obj/nanobsd.10v2/_.w/etc
+
+NANO_VARDIR=/usr/obj/nanobsd.10v2/_.w/var
 
 # src.conf to use when building the image. Defaults to /dev/null for the sake
 # of determinism.
@@ -412,8 +415,9 @@ setup_nanobsd_etc ( ) (
 	(
 	cd ${NANO_WORLDDIR}
 
+	# Petabi disable diskless mode
 	# create diskless marker file
-	touch etc/diskless
+	# touch etc/diskless
 
 	# Make root filesystem R/O by default
 	echo "root_rw_mount=NO" >> etc/defaults/rc.conf
@@ -423,8 +427,10 @@ setup_nanobsd_etc ( ) (
 
 	echo "/dev/${NANO_DRIVE}s1a / ufs ro 1 1" > etc/fstab
 	echo "/dev/${NANO_DRIVE}s3 /cfg ufs rw,noauto 2 2" >> etc/fstab
-	# Petabi mount data to /mnt as rw
-	echo "/dev/${NANO_DRIVE}s4 ${DATA_MOUNT_POINT} ufs rw 2 2" >> etc/fstab
+
+	# Petabi mount var rw, etc ro
+	echo "/dev/${NANO_DRIVE}s3 /var ufs rw 2 2" >> etc/fstab
+	echo "/dev/${NANO_DRIVE}s4 /etc ufs ro 2 2" >> etc/fstab
 	mkdir -p cfg
 	)
 )
@@ -606,10 +612,13 @@ create_i386_diskimage ( ) (
 		fi
 	fi
 	
+	# Petabi use config slice as var
 	# Create Config slice
-	populate_cfg_slice /dev/${MD}s3 "${NANO_CFGDIR}" ${MNT} "s3"
+	# populate_cfg_slice /dev/${MD}s3 "${NANO_CFGDIR}" ${MNT} "s3"
 
-	echo "create data slice"
+	# Create var slice
+	populate_slice /dev/${MD}s3 "${NANO_VARDIR}" ${MNT} "s3"
+
 	# Create Data slice, if any.
 	if [ $NANO_DATASIZE -ne 0 ] ; then
 		populate_data_slice /dev/${MD}s4 "${NANO_DATADIR}" ${MNT} "s4"
