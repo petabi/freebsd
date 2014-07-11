@@ -367,9 +367,9 @@ SYSCTL_INT(_hw_ix, OID_AUTO, enable_symmetric_rss, CTLFLAG_RDTUN, &ixgbe_enable_
     "Enable Symmetric Rss Hashing");
 
 /* Petabi: Configure redirection table */
-static unsigned int ixgbe_redirection = 0xff;
+static unsigned int ixgbe_redirection = 0x1;
 TUNABLE_INT("hw.ixgbe.redirection", &ixgbe_redirection);
-SYSCTL_INT(_hw_ix, OID_AUTO, redirection, CTLFLAG_RDTUN, &ixgbe_redirection, 0xff,
+SYSCTL_INT(_hw_ix, OID_AUTO, redirection, CTLFLAG_RDTUN, &ixgbe_redirection, 0,
     "Configure redirection table entry");
 
 #ifdef DEV_NETMAP
