@@ -262,6 +262,11 @@ netif_common()
 		fi
 	fi
 
+	# Petabi: disable checksum offloading in all of the nics
+	for ifn in ${_cooked_list# }; do
+	    /sbin/ifconfig ${ifn} -txcsum
+	done
+
 	debug "The following interfaces were not configured: $_fail"
 }
 
