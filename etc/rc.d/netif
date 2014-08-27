@@ -267,6 +267,20 @@ netif_common()
 	    /sbin/ifconfig ${ifn} -txcsum
 	done
 
+	# Petabi: disable flow control in interfaces except lo and em
+	# interface name must be in the pattern of letters followed by digit
+	# eg, em1, ix0
+	for ifn in ${_cooked_list# }; do
+	    type=`echo $ifn | sed 's/[0-9]*//g'`
+	    if [ $type == "lo" -o $type == "em" ]; then
+		continue
+	    fi
+
+	    id=`echo $ifn | sed 's/[a-zA-Z]*//g'`
+	    cmd=`echo $(printf "dev.$type.$id.fc=0")`
+	    sysctl $cmd > /dev/null 2>&1
+	done
+
 	debug "The following interfaces were not configured: $_fail"
 }
 
