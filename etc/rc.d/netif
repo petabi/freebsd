@@ -281,6 +281,9 @@ netif_common()
 	    sysctl $cmd > /dev/null 2>&1
 	done
 
+	# Petabi: disable link up and down messages
+	sysctl net.link.log_link_state_change=0
+
 	debug "The following interfaces were not configured: $_fail"
 }
 
