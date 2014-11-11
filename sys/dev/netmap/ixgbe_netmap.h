@@ -238,22 +238,53 @@ ixgbe_netmap_txsync(struct netmap_kring *kring, int flags)
 
 			NM_CHECK_ADDR_LEN(na, addr, len);
 
+                        if (slot->flags & NS_OFFLOAD_CTX) {
+                                struct ixgbe_adv_tx_context_desc *TXD;
+                                int ehdrlen, ip_hlen = 0;
+                                u32 vlan_macip_lens = 0, type_tucmd_mlhl = 0;
+
+                                TXD = (struct ixgbe_adv_tx_context_desc *)curr;
+
+                                type_tucmd_mlhl |= IXGBE_ADVTXD_DCMD_DEXT 
+                                                | IXGBE_ADVTXD_DTYP_CTXT;
+                                type_tucmd_mlhl |= IXGBE_ADVTXD_TUCMD_IPV4;
+                                type_tucmd_mlhl |= IXGBE_ADVTXD_TUCMD_L4T_TCP;
+                                ehdrlen = ETHER_HDR_LEN;
+                                ip_hlen = 20; 
+                                vlan_macip_lens |= ehdrlen << IXGBE_ADVTXD_MACLEN_SHIFT;
+                                vlan_macip_lens |= ip_hlen;
+                                TXD->vlan_macip_lens = htole32(vlan_macip_lens);
+                                TXD->type_tucmd_mlhl = htole32(type_tucmd_mlhl);
+                                TXD->seqnum_seed = htole32(0);
+                                TXD->mss_l4len_idx = htole32(0);
+                                slot->flags &= ~NS_OFFLOAD_CTX;
+                                printf("set offload context %x %x\n", vlan_macip_lens, type_tucmd_mlhl);
+                        } else {
+                        u32 olinfo_status = 0;
 			if (slot->flags & NS_BUF_CHANGED) {
 				/* buffer has changed, reload map */
 				netmap_reload_map(na, txr->txtag, txbuf->map, addr);
 			}
 			slot->flags &= ~(NS_REPORT | NS_BUF_CHANGED);
 
+                        if (slot->flags & NS_OFFLOAD_CSUM) {
+			  slot->flags &= ~NS_OFFLOAD_CSUM;
+                          olinfo_status |= len << IXGBE_ADVTXD_PAYLEN_SHIFT;
+                          olinfo_status |= IXGBE_ADVTXD_POPTS_TXSM;
+                          printf("set offload checksum %x %x\n", olinfo_status, len | flags | IXGBE_ADVTXD_DCMD_IFCS | IXGBE_ADVTXD_DTYP_DATA | IXGBE_ADVTXD_DCMD_DEXT);
+                        }
 			/* Fill the slot in the NIC ring. */
 			/* Use legacy descriptor, they are faster? */
 			curr->read.buffer_addr = htole64(paddr);
-			curr->read.olinfo_status = 0;
+			curr->read.olinfo_status = htole32(olinfo_status);
 			curr->read.cmd_type_len = htole32(len | flags |
-				IXGBE_ADVTXD_DCMD_IFCS | IXGBE_TXD_CMD_EOP);
+//				IXGBE_ADVTXD_DCMD_IFCS | IXGBE_TXD_CMD_EOP);
+				IXGBE_ADVTXD_DCMD_IFCS | IXGBE_ADVTXD_DTYP_DATA | IXGBE_ADVTXD_DCMD_DEXT | IXGBE_TXD_CMD_EOP);
 
 			/* make sure changes to the buffer are synced */
 			bus_dmamap_sync(txr->txtag, txbuf->map,
 				BUS_DMASYNC_PREWRITE);
+                        }
 
 			nm_i = nm_next(nm_i, lim);
 			nic_i = nm_next(nic_i, lim);
