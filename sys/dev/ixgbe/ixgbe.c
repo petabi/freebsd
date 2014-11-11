@@ -1872,7 +1872,6 @@ retry:
 		txd->read.cmd_type_len = htole32(txr->txd_cmd |
 		    cmd_type_len |seglen);
 		txd->read.olinfo_status = htole32(olinfo_status);
-printf("DESC: %lx %x\n", txr->txd_cmd | cmd_type_len | seglen, olinfo_status);
 
 		if (++i == txr->num_desc)
 			i = 0;
@@ -3394,7 +3393,6 @@ ixgbe_tx_ctx_setup(struct tx_ring *txr, struct mbuf *mp,
 	TXD->type_tucmd_mlhl = htole32(type_tucmd_mlhl);
 	TXD->seqnum_seed = htole32(0);
 	TXD->mss_l4len_idx = htole32(0);
-printf("CTX: %x %x %x\n", vlan_macip_lens, type_tucmd_mlhl, *olinfo_status);
 
 	/* We've consumed the first desc, adjust counters */
 	if (++ctxd == txr->num_desc)
