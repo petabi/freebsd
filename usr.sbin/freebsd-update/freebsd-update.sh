@@ -913,6 +913,7 @@ fetch_pick_server_init () {
 	    cut -f 1,2,4 -d ' ' |
 	    sed -e 's/\.$//' |
 	    sort > serverlist_full
+
 # If no records, give up -- we'll just use the server name we were given.
 	if [ `wc -l < serverlist_full` -eq 0 ]; then
 		echo "none found."
@@ -1049,7 +1050,7 @@ fetch_key () {
 
 	echo -n "Fetching public key from ${SERVERNAME}... "
 	rm -f pub.ssl
-#       Petabi: Change to https
+#	Petabi: Change to https
 #	fetch ${QUIETFLAG} http://${SERVERNAME}/${FETCHDIR}/pub.ssl \
 	fetch ${QUIETFLAG} https://${SERVERNAME}/${FETCHDIR}/pub.ssl \
 	    2>${QUIETREDIR} || true
@@ -1070,7 +1071,7 @@ fetch_tag () {
 	echo -n "Fetching metadata signature "
 	echo ${NDEBUG} "for ${RELNUM} from ${SERVERNAME}... "
 	rm -f latest.ssl
-#       Petabi: Change to https
+#	Petabi: Change to https
 #	fetch ${QUIETFLAG} http://${SERVERNAME}/${FETCHDIR}/latest.ssl	\
 	fetch ${QUIETFLAG} https://${SERVERNAME}/${FETCHDIR}/latest.ssl	\
 	    2>${QUIETREDIR} || true
@@ -1142,7 +1143,7 @@ fetch_tagsanity () {
 fetch_metadata_index () {
 	echo ${NDEBUG} "Fetching metadata index... "
 	rm -f ${TINDEXHASH}
-#       Petabi: Change to https
+#	Petabi: Change to https
 #	fetch ${QUIETFLAG} http://${SERVERNAME}/${FETCHDIR}/t/${TINDEXHASH}
 	fetch ${QUIETFLAG} https://${SERVERNAME}/${FETCHDIR}/t/${TINDEXHASH}
 	    2>${QUIETREDIR}
