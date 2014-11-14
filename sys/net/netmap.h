@@ -202,6 +202,7 @@ struct netmap_slot {
 
 #define NS_OFFLOAD_CSUM 0x0040
 #define NS_OFFLOAD_CTX  0x0080
+	/* Petabi: for setting checksum offloading context */
 
 #define	NS_PORT_SHIFT	8
 #define	NS_PORT_MASK	(0xff << NS_PORT_SHIFT)
