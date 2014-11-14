@@ -1314,7 +1314,7 @@ fetch_metadata () {
 		echo ${NDEBUG} "metadata patches.${DDSTATS}"
 		tr '|' '-' < patchlist |
 #		    Petabi: Replace phttpget with fetch for https connection
-#		    lam -s "${FETCHDIR}/f/" - -s ".gz" < filelist |
+#		    lam -s "${FETCHDIR}/tp/" - -s ".gz" |
 #		    xargs ${XARGST} ${PHTTPGET} ${SERVERNAME}	\
 		    lam -s "https://${SERVERNAME}/${FETCHDIR}/tp/" - -s ".gz" |
 		    xargs ${XARGST} fetch \
@@ -1368,7 +1368,7 @@ fetch_metadata () {
 		echo -n "Fetching `wc -l < filelist | tr -d ' '` "
 		echo ${NDEBUG} "metadata files... "
 #		Petabi: Replace phttpget with fetch for https connection
-#		lam -s "${FETCHDIR}/f/" - -s ".gz" < filelist |
+#		lam -s "${FETCHDIR}/m/" - -s ".gz" < filelist |
 #		    xargs ${XARGST} ${PHTTPGET} ${SERVERNAME}	\
 		lam -s "https://${SERVERNAME}/${FETCHDIR}/m/" - -s ".gz" < filelist |
 		    xargs ${XARGST} fetch \
@@ -1861,8 +1861,8 @@ fetch_files () {
 		echo -n "Fetching `wc -l < patchlist | tr -d ' '` "
 		echo ${NDEBUG} "patches.${DDSTATS}"
 		tr '|' '-' < patchlist |
-#		Petabi: Replace phttpget with fetch for https connection
-#		lam -s "${FETCHDIR}/f/" - -s ".gz" < filelist |
+#		    Petabi: Replace phttpget with fetch for https connection
+#		    lam -s "${PATCHDIR}/" - |
 #		    xargs ${XARGST} ${PHTTPGET} ${SERVERNAME}	\
 		    lam -s "https://${SERVERNAME}/${PATCHDIR}/" - |
 		    xargs ${XARGST} fetch \
