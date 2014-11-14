@@ -913,7 +913,6 @@ fetch_pick_server_init () {
 	    cut -f 1,2,4 -d ' ' |
 	    sed -e 's/\.$//' |
 	    sort > serverlist_full
-
 # If no records, give up -- we'll just use the server name we were given.
 	if [ `wc -l < serverlist_full` -eq 0 ]; then
 		echo "none found."
@@ -1050,7 +1049,9 @@ fetch_key () {
 
 	echo -n "Fetching public key from ${SERVERNAME}... "
 	rm -f pub.ssl
-	fetch ${QUIETFLAG} http://${SERVERNAME}/${FETCHDIR}/pub.ssl \
+#       Petabi: Change to https
+#	fetch ${QUIETFLAG} http://${SERVERNAME}/${FETCHDIR}/pub.ssl \
+	fetch ${QUIETFLAG} https://${SERVERNAME}/${FETCHDIR}/pub.ssl \
 	    2>${QUIETREDIR} || true
 	if ! [ -r pub.ssl ]; then
 		echo "failed."
@@ -1069,7 +1070,9 @@ fetch_tag () {
 	echo -n "Fetching metadata signature "
 	echo ${NDEBUG} "for ${RELNUM} from ${SERVERNAME}... "
 	rm -f latest.ssl
-	fetch ${QUIETFLAG} http://${SERVERNAME}/${FETCHDIR}/latest.ssl	\
+#       Petabi: Change to https
+#	fetch ${QUIETFLAG} http://${SERVERNAME}/${FETCHDIR}/latest.ssl	\
+	fetch ${QUIETFLAG} https://${SERVERNAME}/${FETCHDIR}/latest.ssl	\
 	    2>${QUIETREDIR} || true
 	if ! [ -r latest.ssl ]; then
 		echo "failed."
@@ -1139,7 +1142,9 @@ fetch_tagsanity () {
 fetch_metadata_index () {
 	echo ${NDEBUG} "Fetching metadata index... "
 	rm -f ${TINDEXHASH}
-	fetch ${QUIETFLAG} http://${SERVERNAME}/${FETCHDIR}/t/${TINDEXHASH}
+#       Petabi: Change to https
+#	fetch ${QUIETFLAG} http://${SERVERNAME}/${FETCHDIR}/t/${TINDEXHASH}
+	fetch ${QUIETFLAG} https://${SERVERNAME}/${FETCHDIR}/t/${TINDEXHASH}
 	    2>${QUIETREDIR}
 	if ! [ -f ${TINDEXHASH} ]; then
 		echo "failed."
@@ -1263,8 +1268,11 @@ fetch_metadata () {
 		echo -n "Fetching `wc -l < patchlist | tr -d ' '` "
 		echo ${NDEBUG} "metadata patches.${DDSTATS}"
 		tr '|' '-' < patchlist |
-		    lam -s "${FETCHDIR}/tp/" - -s ".gz" |
-		    xargs ${XARGST} ${PHTTPGET} ${SERVERNAME}	\
+#		Petabi: Replace phttpget with fetch for https connection
+#		    lam -s "${FETCHDIR}/f/" - -s ".gz" < filelist |
+#		    xargs ${XARGST} ${PHTTPGET} ${SERVERNAME}	\
+	        lam -s "https://${SERVERNAME}/${FETCHDIR}/tp/" - -s ".gz" |
+		    xargs ${XARGST} fetch \
 			2>${STATSREDIR} | fetch_progress
 		echo "done."
 
@@ -1314,8 +1322,11 @@ fetch_metadata () {
 	if [ -s filelist ]; then
 		echo -n "Fetching `wc -l < filelist | tr -d ' '` "
 		echo ${NDEBUG} "metadata files... "
-		lam -s "${FETCHDIR}/m/" - -s ".gz" < filelist |
-		    xargs ${XARGST} ${PHTTPGET} ${SERVERNAME}	\
+#		Petabi: Replace phttpget with fetch for https connection
+#		lam -s "${FETCHDIR}/f/" - -s ".gz" < filelist |
+#		    xargs ${XARGST} ${PHTTPGET} ${SERVERNAME}	\
+		lam -s "https://${SERVERNAME}/${FETCHDIR}/m/" - -s ".gz" < filelist |
+		    xargs ${XARGST} fetch \
 		    2>${QUIETREDIR}
 
 		while read Y; do
@@ -1701,8 +1712,11 @@ fetch_files_premerge () {
 		done < files.wanted > filelist
 
 		# Actually fetch them
-		lam -s "${OLDFETCHDIR}/f/" - -s ".gz" < filelist |
-		    xargs ${XARGST} ${PHTTPGET} ${SERVERNAME}	\
+#		Petabi: Replace phttpget with fetch for https connection
+#		lam -s "${OLDFETCHDIR}/f/" - -s ".gz" < filelist |
+#		    xargs ${XARGST} ${PHTTPGET} ${SERVERNAME}	\
+		lam -s "https://${SERVERNAME}/${OLDFETCHDIR}/f/" - -s ".gz" < filelist |
+		    xargs ${XARGST} fetch \
 		    2>${QUIETREDIR}
 
 		# Make sure we got them all, and move them into /files/
@@ -1801,8 +1815,11 @@ fetch_files () {
 		echo -n "Fetching `wc -l < patchlist | tr -d ' '` "
 		echo ${NDEBUG} "patches.${DDSTATS}"
 		tr '|' '-' < patchlist |
-		    lam -s "${PATCHDIR}/" - |
-		    xargs ${XARGST} ${PHTTPGET} ${SERVERNAME}	\
+#		Petabi: Replace phttpget with fetch for https connection
+#		lam -s "${FETCHDIR}/f/" - -s ".gz" < filelist |
+#		    xargs ${XARGST} ${PHTTPGET} ${SERVERNAME}	\
+		    lam -s "https://${SERVERNAME}/${PATCHDIR}/" - |
+		    xargs ${XARGST} fetch \
 			2>${STATSREDIR} | fetch_progress
 		echo "done."
 
@@ -1834,8 +1851,11 @@ fetch_files () {
 	if [ -s filelist ]; then
 		echo -n "Fetching `wc -l < filelist | tr -d ' '` "
 		echo ${NDEBUG} "files... "
-		lam -s "${FETCHDIR}/f/" - -s ".gz" < filelist |
-		    xargs ${XARGST} ${PHTTPGET} ${SERVERNAME}	\
+#		Petabi: Replace phttpget with fetch for https connection
+#		lam -s "${FETCHDIR}/f/" - -s ".gz" < filelist |
+#		    xargs ${XARGST} ${PHTTPGET} ${SERVERNAME}	\
+		lam -s "https://${SERVERNAME}/${FETCHDIR}/f/" - -s ".gz" < filelist |
+		    xargs ${XARGST} fetch \
 		    2>${QUIETREDIR}
 
 		while read Y; do
