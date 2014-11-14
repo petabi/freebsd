@@ -1269,10 +1269,10 @@ fetch_metadata () {
 		echo -n "Fetching `wc -l < patchlist | tr -d ' '` "
 		echo ${NDEBUG} "metadata patches.${DDSTATS}"
 		tr '|' '-' < patchlist |
-#		Petabi: Replace phttpget with fetch for https connection
+#		    Petabi: Replace phttpget with fetch for https connection
 #		    lam -s "${FETCHDIR}/f/" - -s ".gz" < filelist |
 #		    xargs ${XARGST} ${PHTTPGET} ${SERVERNAME}	\
-	        lam -s "https://${SERVERNAME}/${FETCHDIR}/tp/" - -s ".gz" |
+		    lam -s "https://${SERVERNAME}/${FETCHDIR}/tp/" - -s ".gz" |
 		    xargs ${XARGST} fetch \
 			2>${STATSREDIR} | fetch_progress
 		echo "done."
