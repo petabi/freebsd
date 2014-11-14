@@ -233,7 +233,7 @@ ixgbe_netmap_txsync(struct netmap_kring *kring, int flags)
 				IXGBE_TXD_CMD_RS : 0;
 
 			/* adv descriptor field to set offloading info */
-			u32 olinfo_status = 0;
+			u32 olinfo_status = len << IXGBE_ADVTXD_PAYLEN_SHIFT;
 
 			/* prefetch for next round */
 			__builtin_prefetch(&ring->slot[nm_i + 1]);
@@ -283,7 +283,6 @@ ixgbe_netmap_txsync(struct netmap_kring *kring, int flags)
 			/* Petabi: set checksum offloading */
 			if (slot->flags & NS_OFFLOAD_CSUM) {
 				slot->flags &= ~NS_OFFLOAD_CSUM;
-				olinfo_status |= len << IXGBE_ADVTXD_PAYLEN_SHIFT;
 				olinfo_status |= IXGBE_ADVTXD_POPTS_TXSM;
 			}
 
