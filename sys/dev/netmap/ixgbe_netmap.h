@@ -254,8 +254,8 @@ ixgbe_netmap_txsync(struct netmap_kring *kring, int flags)
 				type_tucmd_mlhl |= IXGBE_ADVTXD_TUCMD_IPV4;
 				type_tucmd_mlhl |= IXGBE_ADVTXD_TUCMD_L4T_TCP;
 
-				ehdrlen = ETHER_HDR_LEN;
-				ip_hlen = 20;
+				ehdrlen = slot->ptr & 0xff; /* default ETHER_HDR_LEN */
+				ip_hlen = (slot->ptr >> 8) & 0xff; /* default 20 */
 
 				vlan_macip_lens |= ehdrlen << IXGBE_ADVTXD_MACLEN_SHIFT;
 				vlan_macip_lens |= ip_hlen;
