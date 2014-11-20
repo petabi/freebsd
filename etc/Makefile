@@ -277,6 +277,15 @@ distribution:
 	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
 	    ${SSL} ${DESTDIR}/etc/ssl
 .endif
+
+# Petabi: Install Petabi root CA certificate
+	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
+	    ${.CURDIR}/ssl/petabi.com.pem ${DESTDIR}/etc/ssl
+
+	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
+	    ${.CURDIR}/ssl/cert.pem ${DESTDIR}/etc/ssl
+# Petabi: End
+
 .if ${MK_KERBEROS} != "no"
 	cd ${.CURDIR}/root; \
 	    ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
