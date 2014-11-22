@@ -39,6 +39,7 @@ usage: `basename $0` [options] command ... [path]
 Options:
   -b basedir   -- Operate on a system mounted at basedir
                   (default: /)
+  -c ca-cert   -- Petabi Root CA certificate
   -d workdir   -- Store working files in workdir
                   (default: /var/db/freebsd-update/)
   -f conffile  -- Read configuration options from conffile
@@ -88,7 +89,7 @@ EOF
 CONFIGOPTIONS="KEYPRINT WORKDIR SERVERNAME MAILTO ALLOWADD ALLOWDELETE
     KEEPMODIFIEDMETADATA COMPONENTS IGNOREPATHS UPDATEIFUNMODIFIED
     BASEDIR VERBOSELEVEL TARGETRELEASE STRICTCOMPONENTS MERGECHANGES
-    IDSIGNOREPATHS BACKUPKERNEL BACKUPKERNELDIR BACKUPKERNELSYMBOLFILES"
+    IDSIGNOREPATHS BACKUPKERNEL BACKUPKERNELDIR BACKUPKERNELSYMBOLFILES CACERT"
 
 # Set all the configuration options to "".
 nullconfig () {
@@ -127,6 +128,15 @@ config_KeyPrint () {
 config_WorkDir () {
 	if [ -z ${WORKDIR} ]; then
 		WORKDIR=$1
+	else
+		return 1
+	fi
+}
+
+# Set the petabi CA root certificate.
+config_CAcert () {
+	if [ -z ${CACERT} ]; then
+		CACERT=$1
 	else
 		return 1
 	fi
@@ -417,6 +427,10 @@ parse_cmdline () {
 			if [ $# -eq 1 ]; then usage; fi; shift
 			config_BaseDir $1 || usage
 			;;
+		-c)
+		        if [ $# -eq 1 ]; then usage; fi; shift
+			config_CAcert $1 || usage
+			;;
 		-d)
 			if [ $# -eq 1 ]; then usage; fi; shift
 			config_WorkDir $1 || usage
@@ -531,6 +545,7 @@ default_params () {
 	config_BackupKernel yes
 	config_BackupKernelDir /boot/kernel.old
 	config_BackupKernelSymbolFiles no
+	config_CAcert /etc/ssl/petabi.com.pem
 
 	# Merge these defaults into the earlier-configured settings
 	mergeconfig
@@ -1052,7 +1067,7 @@ fetch_key () {
 	rm -f pub.ssl
 #	Petabi: Change to https
 #	fetch ${QUIETFLAG} http://${SERVERNAME}/${FETCHDIR}/pub.ssl \
-	fetch ${QUIETFLAG} https://${SERVERNAME}/${FETCHDIR}/pub.ssl \
+	fetch ${QUIETFLAG} --ca-cert=${CACERT} https://${SERVERNAME}/${FETCHDIR}/pub.ssl \
 	    2>${QUIETREDIR} || true
 	if ! [ -r pub.ssl ]; then
 		echo "failed."
@@ -1073,7 +1088,7 @@ fetch_tag () {
 	rm -f latest.ssl
 #	Petabi: Change to https
 #	fetch ${QUIETFLAG} http://${SERVERNAME}/${FETCHDIR}/latest.ssl	\
-	fetch ${QUIETFLAG} https://${SERVERNAME}/${FETCHDIR}/latest.ssl	\
+	fetch ${QUIETFLAG} --ca-cert=${CACERT} https://${SERVERNAME}/${FETCHDIR}/latest.ssl \
 	    2>${QUIETREDIR} || true
 	if ! [ -r latest.ssl ]; then
 		echo "failed."
@@ -1145,7 +1160,7 @@ fetch_metadata_index () {
 	rm -f ${TINDEXHASH}
 #	Petabi: Change to https
 #	fetch ${QUIETFLAG} http://${SERVERNAME}/${FETCHDIR}/t/${TINDEXHASH}
-	fetch ${QUIETFLAG} https://${SERVERNAME}/${FETCHDIR}/t/${TINDEXHASH}
+	fetch ${QUIETFLAG} --ca-cert=${CACERT} https://${SERVERNAME}/${FETCHDIR}/t/${TINDEXHASH}
 	    2>${QUIETREDIR}
 	if ! [ -f ${TINDEXHASH} ]; then
 		echo "failed."
@@ -1273,7 +1288,7 @@ fetch_metadata () {
 #		    lam -s "${FETCHDIR}/tp/" - -s ".gz" |
 #		    xargs ${XARGST} ${PHTTPGET} ${SERVERNAME}	\
 		    lam -s "https://${SERVERNAME}/${FETCHDIR}/tp/" - -s ".gz" |
-		    xargs ${XARGST} fetch \
+		    xargs ${XARGST} fetch --ca-cert=${CACERT} \
 			2>${STATSREDIR} | fetch_progress
 		echo "done."
 
@@ -1327,7 +1342,7 @@ fetch_metadata () {
 #		lam -s "${FETCHDIR}/m/" - -s ".gz" < filelist |
 #		    xargs ${XARGST} ${PHTTPGET} ${SERVERNAME}	\
 		lam -s "https://${SERVERNAME}/${FETCHDIR}/m/" - -s ".gz" < filelist |
-		    xargs ${XARGST} fetch \
+		    xargs ${XARGST} fetch --ca-cert=${CACERT} \
 		    2>${QUIETREDIR}
 
 		while read Y; do
@@ -1717,7 +1732,7 @@ fetch_files_premerge () {
 #		lam -s "${OLDFETCHDIR}/f/" - -s ".gz" < filelist |
 #		    xargs ${XARGST} ${PHTTPGET} ${SERVERNAME}	\
 		lam -s "https://${SERVERNAME}/${OLDFETCHDIR}/f/" - -s ".gz" < filelist |
-		    xargs ${XARGST} fetch \
+		    xargs ${XARGST} fetch --ca-cert=${CACERT} \
 		    2>${QUIETREDIR}
 
 		# Make sure we got them all, and move them into /files/
@@ -1820,7 +1835,7 @@ fetch_files () {
 #		    lam -s "${PATCHDIR}/" - |
 #		    xargs ${XARGST} ${PHTTPGET} ${SERVERNAME}	\
 		    lam -s "https://${SERVERNAME}/${PATCHDIR}/" - |
-		    xargs ${XARGST} fetch \
+		    xargs ${XARGST} fetch --ca-cert=${CACERT} \
 			2>${STATSREDIR} | fetch_progress
 		echo "done."
 
@@ -1856,7 +1871,7 @@ fetch_files () {
 #		lam -s "${FETCHDIR}/f/" - -s ".gz" < filelist |
 #		    xargs ${XARGST} ${PHTTPGET} ${SERVERNAME}	\
 		lam -s "https://${SERVERNAME}/${FETCHDIR}/f/" - -s ".gz" < filelist |
-		    xargs ${XARGST} fetch \
+		    xargs ${XARGST} fetch --ca-cert=${CACERT} \
 		    2>${QUIETREDIR}
 
 		while read Y; do
