@@ -450,8 +450,8 @@ setup_nanobsd_etc ( ) (
 	echo "/dev/${NANO_DRIVE}s3 /cfg ufs rw,noauto 2 2" >> etc/fstab
 
 	# Petabi mount var rw, etc ro
-	echo "/dev/${NANO_DRIVE}s3 /var ufs rw 2 2" >> etc/fstab
-	echo "/dev/${NANO_DRIVE}s4 /etc ufs ro 2 2" >> etc/fstab
+	echo "/dev/${NANO_DRIVE}s4 /var ufs rw 2 2" >> etc/fstab
+	# echo "/dev/${NANO_DRIVE}s4 /etc ufs ro 2 2" >> etc/fstab
 	mkdir -p cfg
 	)
 )
