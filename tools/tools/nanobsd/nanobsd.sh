@@ -166,9 +166,9 @@ NANO_ARCH=`uname -p`
 NANO_CFGDIR=""
 
 # Directory to populate /data from
-NANO_DATADIR=/usr/obj/nanobsd.10v2/_.w/etc
+NANO_DATADIR=/usr/obj/nanobsd.${NANO_NAME}/_.w/etc
 
-NANO_VARDIR=/usr/obj/nanobsd.10v2/_.w/var
+NANO_VARDIR=/usr/obj/nanobsd.${NANO_NAME}/_.w/var
 
 # src.conf to use when building the image. Defaults to /dev/null for the sake
 # of determinism.
