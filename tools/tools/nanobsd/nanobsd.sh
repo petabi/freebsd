@@ -171,9 +171,7 @@ NANO_ARCH=`uname -p`
 NANO_CFGDIR=""
 
 # Directory to populate /data from
-NANO_DATADIR=/usr/obj/nanobsd.${NANO_NAME}/_.w/etc
-
-NANO_VARDIR=/usr/obj/nanobsd.${NANO_NAME}/_.w/var
+NANO_DATADIR=""
 
 # src.conf to use when building the image. Defaults to /dev/null for the sake
 # of determinism.
@@ -452,11 +450,11 @@ setup_nanobsd_etc ( ) (
 	echo "NANO_DRIVE=${NANO_DRIVE}" > etc/nanobsd.conf
 
 	echo "/dev/${NANO_DRIVE}s1a / ufs ro 1 1" > etc/fstab
-	echo "/dev/${NANO_DRIVE}s3 /cfg ufs rw,noauto 2 2" >> etc/fstab
+	# echo "/dev/${NANO_DRIVE}s3 /cfg ufs rw,noauto 2 2" >> etc/fstab
 
 	# Petabi mount var rw, etc ro
-	echo "/dev/${NANO_DRIVE}s4 /var ufs rw 2 2" >> etc/fstab
-	# echo "/dev/${NANO_DRIVE}s4 /etc ufs ro 2 2" >> etc/fstab
+	echo "/dev/${NANO_DRIVE}s3 /var ufs rw 2 2" >> etc/fstab
+	echo "/dev/${NANO_DRIVE}s4 /etc ufs rw 2 2" >> etc/fstab
 	mkdir -p cfg
 	)
 )
@@ -649,11 +647,11 @@ create_diskimage ( ) (
 	# populate_cfg_slice /dev/${MD}s3 "${NANO_CFGDIR}" ${MNT} "s3"
 
 	# Create var slice
-	populate_slice /dev/${MD}s3 "${NANO_VARDIR}" ${MNT} "s3"
+	populate_slice /dev/${MD}s3 "${NANO_WORLDDIR}/var" ${MNT} "s3"
 
 	# Create Data slice, if any.
 	if [ $NANO_DATASIZE -ne 0 ] ; then
-		populate_data_slice /dev/${MD}s4 "${NANO_DATADIR}" ${MNT} "s4"
+		populate_data_slice /dev/${MD}s4 "${NANO_WORLDDIR}/etc" ${MNT} "s4"
 	fi
 
 	if [ "${NANO_MD_BACKING}" = "swap" ] ; then
