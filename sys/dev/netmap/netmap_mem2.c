@@ -560,6 +560,9 @@ netmap_obj_free(struct netmap_obj_pool *p, uint32_t j)
 		D("invalid index %u, max %u", j, p->objtotal);
 		return 1;
 	}
+	if (j == 17418)
+	  D("FREE BUFFER 17418");
+
 	ptr = &p->bitmap[j / 32];
 	mask = (1 << (j % 32));
 	if (*ptr & mask) {
@@ -591,6 +594,8 @@ netmap_obj_free_va(struct netmap_obj_pool *p, void *vaddr)
 
 		j = j + relofs / p->_objsize;
 		/* KASSERT(j != 0, ("Cannot free object 0")); */
+		if (j == 17418)
+		  D("FREE VA 17418");
 		netmap_obj_free(p, j);
 		return;
 	}
@@ -723,6 +728,8 @@ netmap_free_buf(struct netmap_mem_d *nmd, uint32_t i)
 		D("Cannot free buf#%d: should be in [2, %d[", i, p->objtotal);
 		return;
 	}
+	if (i == 17418)
+	  D("FREE_BUF 17418");
 	netmap_obj_free(p, i);
 }
 
