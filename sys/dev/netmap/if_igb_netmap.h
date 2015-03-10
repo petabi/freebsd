@@ -127,6 +127,38 @@ igb_netmap_txsync(struct netmap_kring *kring, int flags)
 
 			NM_CHECK_ADDR_LEN(na, addr, len);
 
+
+                        /* Petabi: set offloading context */
+
+                        if (slot->flags & NS_OFFLOAD_CTX) {
+                                struct e1000_adv_tx_context_desc * TXD;
+                                int ehdrlen, ip_hlen = 0;		
+                                u32 vlan_macip_lens = 0, type_tucmd_mlhl = 0;
+				
+				olinfo_status |= slot->len << E1000_ADVTXD_PAYLEN_SHIFT;
+
+                                TXD = (struct e1000_adv_tx_context_desc *)curr;
+                                type_tucmd_mlhl |= E1000_ADVTXD_DCMD_DEXT
+                                                | E1000_ADVTXD_DTYP_CTXT;
+                                type_tucmd_mlhl |= E1000_ADVTXD_TUCMD_IPV4;
+                                if (slot->ptr & 0x80)
+                                        type_tucmd_mlhl |= E1000_ADVTXD_TUCMD_L4T_TCP;
+                                else
+                                        type_tucmd_mlhl |= E1000_ADVTXD_TUCMD_L4T_UDP;
+                                ehdrlen = ETHER_HDR_LEN;
+                                ip_hlen = slot->ptr & 0x7f;
+
+				vlan_macip_lens |= ehdrlen << E1000_ADVTXD_MACLEN_SHIFT;
+				vlan_macip_lens |= ip_hlen;
+
+				TXD->vlan_macip_lens = htole32(vlan_macip_lens);
+				TXD->type_tucmd_mlhl = htole32(type_tucmd_mlhl);
+				TXD->seqnum_seed = htole32(0);
+				TXD->mss_l4len_idx = htole32(0);
+
+				slot->flags &= ~NS_OFFLOAD_CTX;
+                        }
+
 			if (slot->flags & NS_BUF_CHANGED) {
 				/* buffer has changed, reload map */
 				netmap_reload_map(na, txr->txtag, txbuf->map, addr);
@@ -230,6 +262,8 @@ igb_netmap_rxsync(struct netmap_kring *kring, int flags)
 				break;
 			ring->slot[nm_i].len = le16toh(curr->wb.upper.length);
 			ring->slot[nm_i].flags = slot_flags;
+                        /* Petabi: copy hash value */
+                        ring->slot[nm_i].ptr = le32toh(curr->wb.lower.hi_dword.rss);			
 			bus_dmamap_sync(rxr->ptag,
 			    rxr->rx_buffers[nic_i].pmap, BUS_DMASYNC_POSTREAD);
 			nm_i = nm_next(nm_i, lim);
