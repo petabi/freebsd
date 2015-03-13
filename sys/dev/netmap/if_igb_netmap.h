@@ -171,7 +171,7 @@ igb_netmap_txsync(struct netmap_kring *kring, int flags)
                         /* Petabi: set checksum offloading */
                         if (slot->flags & NS_OFFLOAD_CSUM) {
                                 slot->flags &= ~NS_OFFLOAD_CSUM;
-                                olinfo_status |= E1000_ADVTXD_PORTS_TXSM;
+                                olinfo_status |= E1000_TXD_POPTS_TXSM << 8;
                         }
 
 			/* Fill the slot in the NIC ring. */
