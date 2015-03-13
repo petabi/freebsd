@@ -127,15 +127,12 @@ igb_netmap_txsync(struct netmap_kring *kring, int flags)
 
 			NM_CHECK_ADDR_LEN(na, addr, len);
 
-
                         /* Petabi: set offloading context */
 
                         if (slot->flags & NS_OFFLOAD_CTX) {
                                 struct e1000_adv_tx_context_desc * TXD;
-                                int ehdrlen, ip_hlen = 0;		
+                                int ehdrlen, ip_hlen = 0;
                                 u32 vlan_macip_lens = 0, type_tucmd_mlhl = 0;
-				
-				olinfo_status |= slot->len << E1000_ADVTXD_PAYLEN_SHIFT;
 
                                 TXD = (struct e1000_adv_tx_context_desc *)curr;
                                 type_tucmd_mlhl |= E1000_ADVTXD_DCMD_DEXT
@@ -145,6 +142,7 @@ igb_netmap_txsync(struct netmap_kring *kring, int flags)
                                         type_tucmd_mlhl |= E1000_ADVTXD_TUCMD_L4T_TCP;
                                 else
                                         type_tucmd_mlhl |= E1000_ADVTXD_TUCMD_L4T_UDP;
+
                                 ehdrlen = ETHER_HDR_LEN;
                                 ip_hlen = slot->ptr & 0x7f;
 
@@ -157,6 +155,11 @@ igb_netmap_txsync(struct netmap_kring *kring, int flags)
 				TXD->mss_l4len_idx = htole32(0);
 
 				slot->flags &= ~NS_OFFLOAD_CTX;
+
+                                nm_i = nm_next(nm_i, lim);
+                                nic_i = nm_next(nic_i, lim);
+
+                                continue;
                         }
 
 			if (slot->flags & NS_BUF_CHANGED) {
@@ -164,6 +167,12 @@ igb_netmap_txsync(struct netmap_kring *kring, int flags)
 				netmap_reload_map(na, txr->txtag, txbuf->map, addr);
 			}
 			slot->flags &= ~(NS_REPORT | NS_BUF_CHANGED);
+
+                        /* Petabi: set checksum offloading */
+                        if (slot->flags & NS_OFFLOAD_CSUM) {
+                                slot->flags &= ~NS_OFFLOAD_CSUM;
+                                olinfo_status |= E1000_ADVTXD_PORTS_TXSM;
+                        }
 
 			/* Fill the slot in the NIC ring. */
 			curr->read.buffer_addr = htole64(paddr);
@@ -263,7 +272,7 @@ igb_netmap_rxsync(struct netmap_kring *kring, int flags)
 			ring->slot[nm_i].len = le16toh(curr->wb.upper.length);
 			ring->slot[nm_i].flags = slot_flags;
                         /* Petabi: copy hash value */
-                        ring->slot[nm_i].ptr = le32toh(curr->wb.lower.hi_dword.rss);			
+                        ring->slot[nm_i].ptr = le32toh(curr->wb.lower.hi_dword.rss);
 			bus_dmamap_sync(rxr->ptag,
 			    rxr->rx_buffers[nic_i].pmap, BUS_DMASYNC_POSTREAD);
 			nm_i = nm_next(nm_i, lim);
