@@ -560,7 +560,6 @@ netmap_obj_free(struct netmap_obj_pool *p, uint32_t j)
 		D("invalid index %u, max %u", j, p->objtotal);
 		return 1;
 	}
-
 	ptr = &p->bitmap[j / 32];
 	mask = (1 << (j % 32));
 	if (*ptr & mask) {
