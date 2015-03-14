@@ -146,15 +146,15 @@ igb_netmap_txsync(struct netmap_kring *kring, int flags)
                                 ehdrlen = ETHER_HDR_LEN;
                                 ip_hlen = slot->ptr & 0x7f;
 
-				vlan_macip_lens |= ehdrlen << E1000_ADVTXD_MACLEN_SHIFT;
-				vlan_macip_lens |= ip_hlen;
+                                vlan_macip_lens |= ehdrlen << E1000_ADVTXD_MACLEN_SHIFT;
+                                vlan_macip_lens |= ip_hlen;
 
-				TXD->vlan_macip_lens = htole32(vlan_macip_lens);
-				TXD->type_tucmd_mlhl = htole32(type_tucmd_mlhl);
-				TXD->seqnum_seed = htole32(0);
-				TXD->mss_l4len_idx = htole32(0);
+                                TXD->vlan_macip_lens = htole32(vlan_macip_lens);
+                                TXD->type_tucmd_mlhl = htole32(type_tucmd_mlhl);
+                                TXD->seqnum_seed = htole32(0);
+                                TXD->mss_l4len_idx = htole32(0);
 
-				slot->flags &= ~NS_OFFLOAD_CTX;
+                                slot->flags &= ~NS_OFFLOAD_CTX;
 
                                 nm_i = nm_next(nm_i, lim);
                                 nic_i = nm_next(nic_i, lim);
@@ -269,8 +269,8 @@ igb_netmap_rxsync(struct netmap_kring *kring, int flags)
 				break;
 			ring->slot[nm_i].len = le16toh(curr->wb.upper.length);
 			ring->slot[nm_i].flags = slot_flags;
-                        /* Petabi: copy hash value */
-                        ring->slot[nm_i].ptr = le32toh(curr->wb.lower.hi_dword.rss);
+                       /* Petabi: copy hash value */
+                       ring->slot[nm_i].ptr = le32toh(curr->wb.lower.hi_dword.rss);
 			bus_dmamap_sync(rxr->ptag,
 			    rxr->rx_buffers[nic_i].pmap, BUS_DMASYNC_POSTREAD);
 			nm_i = nm_next(nm_i, lim);
