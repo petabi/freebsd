@@ -127,6 +127,7 @@ igb_netmap_txsync(struct netmap_kring *kring, int flags)
 
 			NM_CHECK_ADDR_LEN(na, addr, len);
 
+                        olinfo_status |= len << E1000_ADVTXD_PAYLEN_SHIFT;
                         /* Petabi: set offloading context */
 
                         if (slot->flags & NS_OFFLOAD_CTX) {
