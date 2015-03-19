@@ -155,6 +155,61 @@ em_netmap_txsync(struct netmap_kring *kring, int flags)
 
 			NM_CHECK_ADDR_LEN(na, addr, len);
 
+                        /* Petabi: set offloading context */
+                        if (slot->flags & NS_OFFLOADING_CTX) {
+                                struct e1000_context_desc *TXD;
+                                int ehdrlen, ip_hlen = 0;
+                                u16 offload = 0;
+                                u8 tucso, tucss;
+				u32 txd_upper, txd_lower;
+
+                                tucso = tucss = 0;
+
+                                ehdrlen = ETHER_HDR_LEN;
+                                ip_hlen = slot->ptr & 0x7f;
+
+                                if (slot->ptr & 0x80) {
+				  txd_lower = E1000_TXD_CMD_DEXT | E1000_TXD_DTYP_D;
+				  txd_upper |= E1000_TXD_POPTS_TXSM << 8;
+				  offload |= 0x80;
+				  tucss = hdr_len;
+				  tucso = hdr_len + offsetof(struct tcphdr, th_sum);
+ 		/*
+ 		 * Setting up new checksum offload context for every frames
+ 		 * takes a lot of processing time for hardware. This also
+ 		 * reduces performance a lot for small sized frames so avoid
+ 		 * it if driver can use previously configured checksum
+ 		 * offload context.
+ 		 */
+ 		if (txr->last_hw_offload == offload) {
+ 			if (offload & CSUM_IP) {
+ 				if (txr->last_hw_ipcss == ipcss &&
+ 				    txr->last_hw_ipcso == ipcso &&
+ 				    txr->last_hw_tucss == tucss &&
+ 				    txr->last_hw_tucso == tucso)
+ 					return;
+ 			} else {
+ 				if (txr->last_hw_tucss == tucss &&
+ 				    txr->last_hw_tucso == tucso)
+ 					return;
+ 			}
+  		}
+ 		txr->last_hw_offload = offload;
+ 		txr->last_hw_tucss = tucss;
+ 		txr->last_hw_tucso = tucso;
+ 		/*
+ 		 * Start offset for payload checksum calculation.
+ 		 * End offset for payload checksum calculation.
+ 		 * Offset of place to put the checksum.
+ 		 */
+		TXD = (struct e1000_context_desc *)&txr->tx_base[cur];
+ 		TXD->upper_setup.tcp_fields.tucss = hdr_len;
+ 		TXD->upper_setup.tcp_fields.tucse = htole16(0);
+ 		TXD->upper_setup.tcp_fields.tucso = tucso;
+ 		cmd |= E1000_TXD_CMD_TCP;
+      
+                                } else
+                        }
 			if (slot->flags & NS_BUF_CHANGED) {
 				curr->buffer_addr = htole64(paddr);
 				/* buffer has changed, reload map */
