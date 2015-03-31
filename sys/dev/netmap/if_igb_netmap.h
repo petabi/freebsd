@@ -132,7 +132,7 @@ igb_netmap_txsync(struct netmap_kring *kring, int flags)
                         if (slot->flags & NS_OFFLOAD_CTX) {
                                 struct e1000_adv_tx_context_desc * TXD;
                                 int ehdrlen, ip_hlen = 0;
-                                u32 vlan_macip_lens = 0, type_tucmd_mlhl = 0;
+                                u32 vlan_macip_lens = 0, type_tucmd_mlhl = 0, mss_l4len_idx = 0;
 
                                 TXD = (struct e1000_adv_tx_context_desc *)curr;
                                 type_tucmd_mlhl |= E1000_ADVTXD_DCMD_DEXT
@@ -149,10 +149,13 @@ igb_netmap_txsync(struct netmap_kring *kring, int flags)
                                 vlan_macip_lens |= ehdrlen << E1000_ADVTXD_MACLEN_SHIFT;
                                 vlan_macip_lens |= ip_hlen;
 
+                                if (adapter->hw.mac.type == e1000_82575)
+                                         mss_l4len_idx = txr->me << 4;
+
                                 TXD->vlan_macip_lens = htole32(vlan_macip_lens);
                                 TXD->type_tucmd_mlhl = htole32(type_tucmd_mlhl);
                                 TXD->seqnum_seed = htole32(0);
-                                TXD->mss_l4len_idx = htole32(0);
+                                TXD->mss_l4len_idx = htole32(mss_l4len_idx);
 
                                 slot->flags &= ~NS_OFFLOAD_CTX;
 
