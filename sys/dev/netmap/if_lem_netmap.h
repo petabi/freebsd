@@ -144,7 +144,7 @@ lem_netmap_txsync(struct netmap_kring *kring, int flags)
 			NM_CHECK_ADDR_LEN(na, addr, len);
 
                         /* Petabi: set offloading context */
-                        if (slot->flags & 0x0080 || slot->flags & 0x0040) {
+                        if (slot->flags & 0x0080) {
                                 struct e1000_context_desc *TXD;
                                 u32 ip_hlen = 0, hdr_len = 0, ehdrlen, cmd = 0;
 
@@ -152,23 +152,21 @@ lem_netmap_txsync(struct netmap_kring *kring, int flags)
                                 ip_hlen = slot->ptr & 0x7f;
 				hdr_len = ehdrlen + ip_hlen;
 
-				if (slot->flags & 0x0080) { /* ctx */
-				  /*
-				   * Start offset for header checksum calculation.
-				   * End offset for header checksum calculation.
-				   * Offset of place to put the checksum.
-				   */
-				  TXD = (struct e1000_context_desc *)curr;
-				  TXD->lower_setup.ip_fields.ipcss = ehdrlen;
-				  TXD->lower_setup.ip_fields.ipcse =
-				    htole16(hdr_len);
-				  TXD->lower_setup.ip_fields.ipcso =
-				    ehdrlen + offsetof(struct ip, ip_sum);
-				  cmd |= E1000_TXD_CMD_IP;
+				/*
+				 * Start offset for header checksum calculation.
+				 * End offset for header checksum calculation.
+				 * Offset of place to put the checksum.
+				 */
+				TXD = (struct e1000_context_desc *)curr;
+				TXD->lower_setup.ip_fields.ipcss = ehdrlen;
+				TXD->lower_setup.ip_fields.ipcse =
+				  htole16(hdr_len);
+				TXD->lower_setup.ip_fields.ipcso =
+				  ehdrlen + offsetof(struct ip, ip_sum);
+				cmd |= E1000_TXD_CMD_IP;
 
-
-				  if (adapter->last_hw_offload != CSUM_TCP &&
-				      adapter->last_hw_offload != CSUM_UDP) {
+				if (adapter->last_hw_offload != CSUM_TCP &&
+				    adapter->last_hw_offload != CSUM_UDP) {
 				  /*
 				   * Start offset for payload checksum calculation.
 				   * End offset for payload checksum calculation.
@@ -193,13 +191,17 @@ lem_netmap_txsync(struct netmap_kring *kring, int flags)
 				    htole32(adapter->txd_cmd | E1000_TXD_CMD_DEXT | cmd);
 				  nm_i = nm_next(nm_i, lim);
 				  nic_i = nm_next(nic_i, lim);
-				  continue;
-				} else {
-				  txd_lower = E1000_TXD_CMD_DEXT | E1000_TXD_DTYP_D;
-				  txd_upper |= E1000_TXD_POPTS_TXSM << 8;
-				  txd_upper |= E1000_TXD_POPTS_IXSM << 8;
-				  }
+				  slot->flags &= ~0x0080;
 				}
+				continue;
+			}
+
+			if (slot->flags & 0x0040) {
+			  txd_lower = E1000_TXD_CMD_DEXT | E1000_TXD_DTYP_D;
+			  txd_upper |= E1000_TXD_POPTS_TXSM << 8;
+			  txd_upper |= E1000_TXD_POPTS_IXSM << 8;
+			  slot->flags &= ~0x0040;
+				  
 			}
 
 			if (slot->flags & NS_BUF_CHANGED) {
