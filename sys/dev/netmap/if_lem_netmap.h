@@ -165,34 +165,33 @@ lem_netmap_txsync(struct netmap_kring *kring, int flags)
 				  ehdrlen + offsetof(struct ip, ip_sum);
 				cmd |= E1000_TXD_CMD_IP;
 
-				if (adapter->last_hw_offload != CSUM_TCP &&
-				    adapter->last_hw_offload != CSUM_UDP) {
+				/* if (adapter->last_hw_offload != CSUM_TCP && */
+				/*     adapter->last_hw_offload != CSUM_UDP) { */
 				  /*
 				   * Start offset for payload checksum calculation.
 				   * End offset for payload checksum calculation.
 				   * Offset of place to put the checksum.
 				   */
-				  TXD = (struct e1000_context_desc *)curr;
 				  TXD->upper_setup.tcp_fields.tucss = hdr_len;
 				  TXD->upper_setup.tcp_fields.tucse = htole16(0);
+				  cmd |= E1000_TXD_CMD_TCP;
 
 				  if (slot->ptr & 0x80) { /* tcp */
 				    TXD->upper_setup.tcp_fields.tucso =
 				      hdr_len + offsetof(struct tcphdr, th_sum);
-				    cmd |= E1000_TXD_CMD_TCP;
-				    adapter->last_hw_offload = CSUM_TCP;
+				    /* adapter->last_hw_offload = CSUM_TCP; */
 				  } else { /* udp */
 				    TXD->upper_setup.tcp_fields.tucso =
 				      hdr_len + offsetof(struct udphdr, uh_sum);
-				    adapter->last_hw_offload = CSUM_UDP;
+				    /* adapter->last_hw_offload = CSUM_UDP; */
 				  }
 				  TXD->tcp_seg_setup.data = htole32(0);
 				  TXD->cmd_and_length =
 				    htole32(adapter->txd_cmd | E1000_TXD_CMD_DEXT | cmd);
 				  nm_i = nm_next(nm_i, lim);
 				  nic_i = nm_next(nic_i, lim);
-				  slot->flags &= ~0x0080;
-				}
+				/* } */
+				slot->flags &= ~0x0080;
 				continue;
 			}
 
@@ -201,7 +200,6 @@ lem_netmap_txsync(struct netmap_kring *kring, int flags)
 			  txd_upper |= E1000_TXD_POPTS_TXSM << 8;
 			  txd_upper |= E1000_TXD_POPTS_IXSM << 8;
 			  slot->flags &= ~0x0040;
-				  
 			}
 
 			if (slot->flags & NS_BUF_CHANGED) {
