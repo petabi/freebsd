@@ -96,7 +96,6 @@ lem_netmap_txsync(struct netmap_kring *kring, int flags)
 	u_int const head = kring->rhead;
 	/* generate an interrupt approximately every half ring */
 	u_int report_frequency = kring->nkr_num_slots >> 1;
-	u32 txd_upper = 0, txd_lower = 0;
 
 	/* device-specific */
 	struct adapter *adapter = ifp->if_softc;
@@ -143,65 +142,6 @@ lem_netmap_txsync(struct netmap_kring *kring, int flags)
 
 			NM_CHECK_ADDR_LEN(na, addr, len);
 
-                        /* Petabi: set offloading context */
-                        if (slot->flags & 0x0080) {
-                                struct e1000_context_desc *TXD;
-                                u32 ip_hlen = 0, hdr_len = 0, ehdrlen, cmd = 0;
-
-                                ehdrlen = ETHER_HDR_LEN;
-                                ip_hlen = slot->ptr & 0x7f;
-				hdr_len = ehdrlen + ip_hlen;
-
-				/*
-				 * Start offset for header checksum calculation.
-				 * End offset for header checksum calculation.
-				 * Offset of place to put the checksum.
-				 */
-				TXD = (struct e1000_context_desc *)curr;
-				TXD->lower_setup.ip_fields.ipcss = ehdrlen;
-				TXD->lower_setup.ip_fields.ipcse =
-				  htole16(hdr_len);
-				TXD->lower_setup.ip_fields.ipcso =
-				  ehdrlen + offsetof(struct ip, ip_sum);
-				cmd |= E1000_TXD_CMD_IP;
-
-				/* if (adapter->last_hw_offload != CSUM_TCP && */
-				/*     adapter->last_hw_offload != CSUM_UDP) { */
-				  /*
-				   * Start offset for payload checksum calculation.
-				   * End offset for payload checksum calculation.
-				   * Offset of place to put the checksum.
-				   */
-				  TXD->upper_setup.tcp_fields.tucss = hdr_len;
-				  TXD->upper_setup.tcp_fields.tucse = htole16(0);
-				  cmd |= E1000_TXD_CMD_TCP;
-
-				  if (slot->ptr & 0x80) { /* tcp */
-				    TXD->upper_setup.tcp_fields.tucso =
-				      hdr_len + offsetof(struct tcphdr, th_sum);
-				    /* adapter->last_hw_offload = CSUM_TCP; */
-				  } else { /* udp */
-				    TXD->upper_setup.tcp_fields.tucso =
-				      hdr_len + offsetof(struct udphdr, uh_sum);
-				    /* adapter->last_hw_offload = CSUM_UDP; */
-				  }
-				  TXD->tcp_seg_setup.data = htole32(0);
-				  TXD->cmd_and_length =
-				    htole32(adapter->txd_cmd | E1000_TXD_CMD_DEXT | cmd);
-				  nm_i = nm_next(nm_i, lim);
-				  nic_i = nm_next(nic_i, lim);
-				/* } */
-				slot->flags &= ~0x0080;
-				continue;
-			}
-
-			if (slot->flags & 0x0040) {
-			  txd_lower = E1000_TXD_CMD_DEXT | E1000_TXD_DTYP_D;
-			  txd_upper |= E1000_TXD_POPTS_TXSM << 8;
-			  txd_upper |= E1000_TXD_POPTS_IXSM << 8;
-			  slot->flags &= ~0x0040;
-			}
-
 			if (slot->flags & NS_BUF_CHANGED) {
 				/* buffer has changed, reload map */
 				curr->buffer_addr = htole64(paddr);
@@ -210,8 +150,8 @@ lem_netmap_txsync(struct netmap_kring *kring, int flags)
 			slot->flags &= ~(NS_REPORT | NS_BUF_CHANGED);
 
 			/* Fill the slot in the NIC ring. */
-			curr->upper.data = htole32(txd_upper);
-			curr->lower.data = htole32(txd_lower | adapter->txd_cmd | len |
+			curr->upper.data = 0;
+			curr->lower.data = htole32(adapter->txd_cmd | len |
 				(E1000_TXD_CMD_EOP | flags) );
 			bus_dmamap_sync(adapter->txtag, txbuf->map,
 				BUS_DMASYNC_PREWRITE);
