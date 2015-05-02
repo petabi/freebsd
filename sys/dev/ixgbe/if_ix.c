@@ -366,7 +366,7 @@ static int fdir_pballoc = 1;
 #endif
 
 /* Petabi: Symmetric Rss enable variable, default disable */
-static int ixgbe_enable_symmetric_rss = FALSE;
+static int ixgbe_enable_symmetric_rss = TRUE;
 TUNABLE_INT("hw.ixgbe.enable_symmetric_rss", &ixgbe_enable_symmetric_rss);
 SYSCTL_INT(_hw_ix, OID_AUTO, enable_symmetric_rss, CTLFLAG_RDTUN, &ixgbe_enable_symmetric_rss, 0,
            "Enable Symmetric Rss Hashing");
