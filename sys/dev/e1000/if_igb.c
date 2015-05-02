@@ -409,7 +409,7 @@ SYSCTL_INT(_hw_igb, OID_AUTO, rx_process_limit, CTLFLAG_RDTUN,
     "Maximum number of received packets to process at a time, -1 means unlimited");
 
 /* Petabi: Symmetric Rss enable variable, default disable */
-static int igb_enable_symmetric_rss = FALSE;
+static int igb_enable_symmetric_rss = TRUE;
 TUNABLE_INT("hw.igb.enable_symmetric_rss", &igb_enable_symmetric_rss);
 SYSCTL_INT(_hw_igb, OID_AUTO, enable_symmetric_rss, CTLFLAG_RDTUN, &igb_enable_symmetric_rss, 0,
     "Enable Symmetric Rss Hashing");
