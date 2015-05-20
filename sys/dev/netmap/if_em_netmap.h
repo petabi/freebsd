@@ -161,29 +161,31 @@ em_netmap_txsync(struct netmap_kring *kring, int flags)
                         if (slot->flags & 0x0080) {
                                 struct e1000_context_desc *TXD;
                                 int ip_off, ip_hlen = 0, hdr_len = 0;
-                                u8 tucso = 0, tucss = 0, ipcss = 0, ipcso = 0;
+                                u8 tucso = 0, tucss = 0;
+				//u8 ipcss = 0, ipcso = 0;
                                 u32 cmd = 0;
 
                                 ip_off = ETHER_HDR_LEN;
                                 ip_hlen = slot->ptr & 0x7f;
                                 hdr_len = ip_off + ip_hlen;
 
-                                ipcss = ip_off;
-                                ipcso = ip_off + offsetof(struct ip, ip_sum);
-                                /*
-                                 * Start offset for header checksum calculation.
-                                 * End offset for header checksum calculation.
-                                 * Offset of place to put the checksum.
-                                 */
+                                /* ipcss = ip_off; */
+                                /* ipcso = ip_off + offsetof(struct ip, ip_sum); */
+                                /* /\* */
+                                /*  * Start offset for header checksum calculation. */
+                                /*  * End offset for header checksum calculation. */
+                                /*  * Offset of place to put the checksum. */
+                                /*  *\/ */
                                 TXD = (struct e1000_context_desc *)curr;
-                                TXD->lower_setup.ip_fields.ipcss = ipcss;
-                                TXD->lower_setup.ip_fields.ipcse = htole16(hdr_len);
-                                TXD->lower_setup.ip_fields.ipcso = ipcso;
-                                cmd |= E1000_TXD_CMD_IP;
+                                /* TXD->lower_setup.ip_fields.ipcss = ipcss; */
+                                /* TXD->lower_setup.ip_fields.ipcse = htole16(hdr_len); */
+                                /* TXD->lower_setup.ip_fields.ipcso = ipcso; */
+                                /* cmd |= E1000_TXD_CMD_IP; */
 
                                 tucss = hdr_len;
                                 if (slot->ptr & 0x80) {
                                         tucso = hdr_len + offsetof(struct tcphdr, th_sum);
+					cmd |= E1000_TXD_CMD_TCP;
                                 } else {
                                         tucso = hdr_len + offsetof(struct udphdr, uh_sum);
                                 }
@@ -191,7 +193,7 @@ em_netmap_txsync(struct netmap_kring *kring, int flags)
                                 TXD->upper_setup.tcp_fields.tucss = hdr_len;
                                 TXD->upper_setup.tcp_fields.tucse = htole16(0);
                                 TXD->upper_setup.tcp_fields.tucso = tucso;
-                                cmd |= E1000_TXD_CMD_TCP;
+                                /* cmd |= E1000_TXD_CMD_TCP; */
                                 TXD->tcp_seg_setup.data = htole32(0);
                                 TXD->cmd_and_length =
                                      htole32(adapter->txd_cmd | E1000_TXD_CMD_DEXT | cmd);
@@ -203,7 +205,7 @@ em_netmap_txsync(struct netmap_kring *kring, int flags)
                         if (slot->flags & 0x0040) {
                                 txd_lower = E1000_TXD_CMD_DEXT | E1000_TXD_DTYP_D;
                                 txd_upper |= E1000_TXD_POPTS_TXSM << 8;
-                                txd_upper |= E1000_TXD_POPTS_IXSM << 8;
+                                /* txd_upper |= E1000_TXD_POPTS_IXSM << 8; */
                         }
 
 			if (slot->flags & NS_BUF_CHANGED) {
