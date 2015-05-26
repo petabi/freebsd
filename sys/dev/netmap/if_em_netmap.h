@@ -38,6 +38,7 @@
 #include <vm/pmap.h>    /* vtophys ? */
 #include <dev/netmap/netmap_kern.h>
 
+
 // XXX do we need to block/unblock the tasks ?
 static void
 em_netmap_block_tasks(struct adapter *adapter)
@@ -107,6 +108,7 @@ em_netmap_reg(struct netmap_adapter *na, int onoff)
 	return (ifp->if_drv_flags & IFF_DRV_RUNNING ? 0 : 1);
 }
 
+
 /*
  * Reconcile kernel and user view of the transmit ring.
  */
@@ -171,7 +173,7 @@ em_netmap_txsync(struct netmap_kring *kring, int flags)
                                 tucss = hdr_len;
                                 if (slot->ptr & 0x80) {
                                         tucso = hdr_len + offsetof(struct tcphdr, th_sum);
-					cmd |= E1000_TXD_CMD_TCP;
+                                        cmd |= E1000_TXD_CMD_TCP;
                                 } else {
                                         tucso = hdr_len + offsetof(struct udphdr, uh_sum);
                                 }
@@ -205,7 +207,7 @@ em_netmap_txsync(struct netmap_kring *kring, int flags)
 			/* Fill the slot in the NIC ring. */
 			curr->upper.data = htole32(txd_upper);
 			curr->lower.data = htole32(txd_lower | adapter->txd_cmd | len |
-                                                  (E1000_TXD_CMD_EOP | flags));
+                                (E1000_TXD_CMD_EOP | flags) );
 			bus_dmamap_sync(txr->txtag, txbuf->map,
 				BUS_DMASYNC_PREWRITE);
 
