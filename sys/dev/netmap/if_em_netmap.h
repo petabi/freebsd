@@ -38,7 +38,6 @@
 #include <vm/pmap.h>    /* vtophys ? */
 #include <dev/netmap/netmap_kern.h>
 
-
 // XXX do we need to block/unblock the tasks ?
 static void
 em_netmap_block_tasks(struct adapter *adapter)
@@ -108,7 +107,6 @@ em_netmap_reg(struct netmap_adapter *na, int onoff)
 	return (ifp->if_drv_flags & IFF_DRV_RUNNING ? 0 : 1);
 }
 
-
 /*
  * Reconcile kernel and user view of the transmit ring.
  */
@@ -158,29 +156,17 @@ em_netmap_txsync(struct netmap_kring *kring, int flags)
 			NM_CHECK_ADDR_LEN(na, addr, len);
 
                         /* Petabi: set offloading context */
-                        if (slot->flags & 0x0080) {
+                        if (slot->flags & NS_OFFLOAD_CTX) {
                                 struct e1000_context_desc *TXD;
                                 int ip_off, ip_hlen = 0, hdr_len = 0;
                                 u8 tucso = 0, tucss = 0;
-				//u8 ipcss = 0, ipcso = 0;
                                 u32 cmd = 0;
 
                                 ip_off = ETHER_HDR_LEN;
                                 ip_hlen = slot->ptr & 0x7f;
                                 hdr_len = ip_off + ip_hlen;
 
-                                /* ipcss = ip_off; */
-                                /* ipcso = ip_off + offsetof(struct ip, ip_sum); */
-                                /* /\* */
-                                /*  * Start offset for header checksum calculation. */
-                                /*  * End offset for header checksum calculation. */
-                                /*  * Offset of place to put the checksum. */
-                                /*  *\/ */
                                 TXD = (struct e1000_context_desc *)curr;
-                                /* TXD->lower_setup.ip_fields.ipcss = ipcss; */
-                                /* TXD->lower_setup.ip_fields.ipcse = htole16(hdr_len); */
-                                /* TXD->lower_setup.ip_fields.ipcso = ipcso; */
-                                /* cmd |= E1000_TXD_CMD_IP; */
 
                                 tucss = hdr_len;
                                 if (slot->ptr & 0x80) {
@@ -193,19 +179,20 @@ em_netmap_txsync(struct netmap_kring *kring, int flags)
                                 TXD->upper_setup.tcp_fields.tucss = hdr_len;
                                 TXD->upper_setup.tcp_fields.tucse = htole16(0);
                                 TXD->upper_setup.tcp_fields.tucso = tucso;
-                                /* cmd |= E1000_TXD_CMD_TCP; */
                                 TXD->tcp_seg_setup.data = htole32(0);
                                 TXD->cmd_and_length =
                                      htole32(adapter->txd_cmd | E1000_TXD_CMD_DEXT | cmd);
                                 nm_i = nm_next(nm_i, lim);
                                 nic_i = nm_next(nic_i, lim);
+
+                                slot->flags &= ~NS_OFFLOAD_CTX;
                                 continue;
                         }
 
-                        if (slot->flags & 0x0040) {
+                        if (slot->flags & NS_OFFLOAD_CSUM) {
                                 txd_lower = E1000_TXD_CMD_DEXT | E1000_TXD_DTYP_D;
                                 txd_upper |= E1000_TXD_POPTS_TXSM << 8;
-                                /* txd_upper |= E1000_TXD_POPTS_IXSM << 8; */
+                                slot->flags &= ~NS_OFFLOAD_CSUM;
                         }
 
 			if (slot->flags & NS_BUF_CHANGED) {
@@ -218,7 +205,7 @@ em_netmap_txsync(struct netmap_kring *kring, int flags)
 			/* Fill the slot in the NIC ring. */
 			curr->upper.data = htole32(txd_upper);
 			curr->lower.data = htole32(txd_lower | adapter->txd_cmd | len |
-				(E1000_TXD_CMD_EOP | flags) );
+                                                  (E1000_TXD_CMD_EOP | flags));
 			bus_dmamap_sync(txr->txtag, txbuf->map,
 				BUS_DMASYNC_PREWRITE);
 
