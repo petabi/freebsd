@@ -207,7 +207,7 @@ em_netmap_txsync(struct netmap_kring *kring, int flags)
 			/* Fill the slot in the NIC ring. */
 			curr->upper.data = htole32(txd_upper);
 			curr->lower.data = htole32(txd_lower | adapter->txd_cmd | len |
-                                (E1000_TXD_CMD_EOP | flags) );
+				(E1000_TXD_CMD_EOP | flags) );
 			bus_dmamap_sync(txr->txtag, txbuf->map,
 				BUS_DMASYNC_PREWRITE);
 
