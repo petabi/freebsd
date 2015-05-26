@@ -170,6 +170,11 @@ em_netmap_txsync(struct netmap_kring *kring, int flags)
 
                                 TXD = (struct e1000_context_desc *)curr;
 
+                                /*
+                                 * we only setup TCP/UDP offloading. The reason why
+                                 * we don't setup IP checksum offloading is it's already
+                                 * been computed in OS
+                                 */
                                 tucss = hdr_len;
                                 if (slot->ptr & 0x80) {
                                         tucso = hdr_len + offsetof(struct tcphdr, th_sum);
