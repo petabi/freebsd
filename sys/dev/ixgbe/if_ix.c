@@ -3175,14 +3175,14 @@ ixgbe_initialize_rss_mapping(struct adapter *adapter)
 		}
 	}
 
+	static uint32_t sym_rsk[10] = {0xa46da56d, 0xa46da56d, 0xa56da56d, 0xa46da56d,
+				       0xa46da56d, 0xa46da56d, 0xa56da56d, 0xa46da56d,
+				       0xa46da56d, 0xa46da56d};
+
 	/* Now fill our hash function seeds */
 	if (ixgbe_enable_symmetric_rss) {
-		for (int i = 0; i < 10; i++)  {
-			if (i == 2 || i == 6)
-				IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), 0xa56da56d);
-			else
-				IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), 0xa46da56d);
-		}
+		for (int i = 0; i < 10; i++)
+			IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), sym_rsk[i]);
 	} else
 		for (int i = 0; i < 10; i++)
 			IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), rss_key[i]);
