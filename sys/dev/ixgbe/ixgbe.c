@@ -4258,6 +4258,12 @@ ixgbe_initialize_receive_units(struct adapter *adapter)
 				IXGBE_WRITE_REG(hw, IXGBE_RETA(i >> 2), reta);
 		}
 
+               /*
+                * To make the symmetric RSS hash function work, we have to make sure
+                * the byte ordering in the following seed (sym_rsk) array is exactly same
+                * as it appears. For example, the first byte must be 0x6d, but in the little
+                * endian machine it is 0xa4, that's why we have to have endian test.
+                */
                static uint32_t sym_rsk[10] = {0x6da56da4, 0x6da56da4, 0x6da56da5, 0x6da56da4,
                                               0x6da56da4, 0x6da56da4, 0x6da56da5, 0x6da56da4,
                                               0x6da56da4, 0x6da56da4};
