@@ -4258,27 +4258,27 @@ ixgbe_initialize_receive_units(struct adapter *adapter)
 				IXGBE_WRITE_REG(hw, IXGBE_RETA(i >> 2), reta);
 		}
 
-               /*
-                * To make the symmetric RSS hash function work, we have to make sure
-                * the byte ordering in the following seed (sym_rsk) array is exactly same
-                * as it appears. For example, the first byte must be 0x6d, but in the little
-                * endian machine it is 0xa4, that's why we have to have endian test.
-                */
-               static uint32_t sym_rsk[10] = {0x6da56da4, 0x6da56da4, 0x6da56da5, 0x6da56da4,
-                                              0x6da56da4, 0x6da56da4, 0x6da56da5, 0x6da56da4,
-                                              0x6da56da4, 0x6da56da4};
+                /*
+                 * To make the symmetric RSS hash function work, we have to make sure
+                 * the byte ordering in the following seed (sym_rsk) array is exactly same
+                 * as it appears. For example, the first byte must be 0x6d, but in the little
+                 * endian machine it is 0xa4, that's why we have to have endian test.
+                 */
+                static uint32_t sym_rsk[10] = {0x6da56da4, 0x6da56da4, 0x6da56da5, 0x6da56da4,
+                                               0x6da56da4, 0x6da56da4, 0x6da56da5, 0x6da56da4,
+                                               0x6da56da4, 0x6da56da4};
 
 		/* Now fill our hash function seeds */
-               if (ixgbe_enable_symmetric_rss) {
-                       for (int i = 0; i < 10; i++)
+                if (ixgbe_enable_symmetric_rss) {
+                        for (int i = 0; i < 10; i++)
 #if BYTE_ORDER == BIG_ENDIAN
-                               IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), sym_rsk[i]);
+                                IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), sym_rsk[i]);
 #else
-                               IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), htonl(sym_rsk[i]));
+                                IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), htonl(sym_rsk[i]));
 #endif
-               } else
-                       for (int i = 0; i < 10; i++)
-                               IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), random[i]);
+                } else
+                        for (int i = 0; i < 10; i++)
+                                IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), random[i]);
 
 		/* Perform hash on these packet types */
 		mrqc = IXGBE_MRQC_RSSEN
