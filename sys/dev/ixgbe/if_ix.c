@@ -3170,12 +3170,16 @@ ixgbe_initialize_rss_mapping(struct adapter *adapter)
 	}
 
 	/* Now fill our hash function seeds */
-	for (int i = 0; i < 10; i++)
-	  /* Petabi */
-	  if (ixgbe_enable_symmetric_rss)
-		IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), 0x6d5a6d5a);
-	  else
-		IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), rss_key[i]);
+	if (ixgbe_enable_symmetric_rss) {
+		for (int i = 0; i < 10; i++)  {
+			if (i == 2 || i == 6)
+				IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), 0xa56da56d);
+			else
+				IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), 0xa46da56d);
+		}
+	} else
+		for (int i = 0; i < 10; i++)
+			IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), rss_key[i]);
 
 	/* Perform hash on these packet types */
 #ifdef	RSS
