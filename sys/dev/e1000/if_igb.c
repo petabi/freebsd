@@ -4626,14 +4626,26 @@ igb_initialise_rss_mapping(struct adapter *adapter)
 #else
 	arc4rand(&rss_key, sizeof(rss_key), 0);
 #endif
-	for (i = 0; i < 10; i++)
-	    /* petabi */
-	    if (igb_enable_symmetric_rss)
-		E1000_WRITE_REG_ARRAY(hw,
-		    E1000_RSSRK(0), i, 0x6d5a6d5a);
-	    else
-		E1000_WRITE_REG_ARRAY(hw,
-		    E1000_RSSRK(0), i, rss_key[i]);
+
+	/* For endianness explanation, please refer to ixgbe */
+	static uint32_t sym_rsk[10] = {0x6da56da4, 0x6da56da4, 0x6da56da5, 0x6da56da4,
+				       0x6da56da4, 0x6da56da4, 0x6da56da5, 0x6da56da4,
+				       0x6da56da4, 0x6da56da4};
+
+	/* Now fill our hash function seeds */
+	if (igb_enable_symmetric_rss) {
+		for (i = 0; i < 10; i++)
+#if BYTE_ORDER == BIG_ENDIAN
+			E1000_WRITE_REG_ARRAY(hw,
+			    E1000_RSSRK(0), i, sym_rsk[i]);
+#else
+			E1000_WRITE_REG_ARRAY(hw,
+			    E1000_RSSRK(0), i, htonl(rss_key[i]));
+#endif
+        } else
+		for (int i = 0; i < 10; i++)
+			E1000_WRITE_REG_ARRAY(hw,
+			    E1000_RSSRK(0), i, random[i]);
 
 	/*
 	 * Configure the RSS fields to hash upon.
