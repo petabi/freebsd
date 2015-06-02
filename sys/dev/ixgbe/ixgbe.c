@@ -4258,14 +4258,18 @@ ixgbe_initialize_receive_units(struct adapter *adapter)
 				IXGBE_WRITE_REG(hw, IXGBE_RETA(i >> 2), reta);
 		}
 
-               static uint32_t sym_rsk[10] = {0xa46da56d, 0xa46da56d, 0xa56da56d, 0xa46da56d,
-                                              0xa46da56d, 0xa46da56d, 0xa56da56d, 0xa46da56d,
-                                              0xa46da56d, 0xa46da56d};
+               static uint32_t sym_rsk[10] = {0x6da56da4, 0x6da56da4, 0x6da56da5, 0x6da56da4,
+                                              0x6da56da4, 0x6da56da4, 0x6da56da5, 0x6da56da4,
+                                              0x6da56da4, 0x6da56da4};
 
 		/* Now fill our hash function seeds */
                 if (ixgbe_enable_symmetric_rss) {
                         for (int i = 0; i < 10; i++)
+#if BYTE_ORDER == BIG_ENDIAN
                                 IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), sym_rsk[i]);
+#else
+                                IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), htonl(sym_rsk[i]));
+#endif
                 } else
                         for (int i = 0; i < 10; i++)
                                 IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), random[i]);
