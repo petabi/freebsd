@@ -4263,16 +4263,16 @@ ixgbe_initialize_receive_units(struct adapter *adapter)
                                               0x6da56da4, 0x6da56da4};
 
 		/* Now fill our hash function seeds */
-                if (ixgbe_enable_symmetric_rss) {
-                        for (int i = 0; i < 10; i++)
+               if (ixgbe_enable_symmetric_rss) {
+                       for (int i = 0; i < 10; i++)
 #if BYTE_ORDER == BIG_ENDIAN
-                                IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), sym_rsk[i]);
+                               IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), sym_rsk[i]);
 #else
-                                IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), htonl(sym_rsk[i]));
+                               IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), htonl(sym_rsk[i]));
 #endif
-                } else
-                        for (int i = 0; i < 10; i++)
-                                IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), random[i]);
+               } else
+                       for (int i = 0; i < 10; i++)
+                               IXGBE_WRITE_REG(hw, IXGBE_RSSRK(i), random[i]);
 
 		/* Perform hash on these packet types */
 		mrqc = IXGBE_MRQC_RSSEN
