@@ -4517,25 +4517,25 @@ igb_initialize_receive_units(struct adapter *adapter)
 		/* Now fill in hash table */
 		mrqc = E1000_MRQC_ENABLE_RSS_4Q;
 
-               /* For endianness explanation, please refer to ixgbe */
-               static uint32_t sym_rsk[10] = {0x6da56da4, 0x6da56da4, 0x6da56da5, 0x6da56da4,
-                                              0x6da56da4, 0x6da56da4, 0x6da56da5, 0x6da56da4,
-                                              0x6da56da4, 0x6da56da4};
+                /* For endianness explanation, please refer to ixgbe */
+                static uint32_t sym_rsk[10] = {0x6da56da4, 0x6da56da4, 0x6da56da5, 0x6da56da4,
+                                               0x6da56da4, 0x6da56da4, 0x6da56da5, 0x6da56da4,
+                                               0x6da56da4, 0x6da56da4};
 
 		/* Now fill our hash function seeds */
-               if (igb_enable_symmetric_rss) {
-                       for (int i = 0; i < 10; i++)
+                if (igb_enable_symmetric_rss) {
+                        for (int i = 0; i < 10; i++)
 #if BYTE_ORDER == BIG_ENDIAN
-                               E1000_WRITE_REG_ARRAY(hw,
-                                                     E1000_RSSRK(0), i, sym_rsk[i]);
+                                E1000_WRITE_REG_ARRAY(hw,
+                                                      E1000_RSSRK(0), i, sym_rsk[i]);
 #else
-                               E1000_WRITE_REG_ARRAY(hw,
-                                                     E1000_RSSRK(0), i, htonl(sym_rsk[i]));
+                                E1000_WRITE_REG_ARRAY(hw,
+                                                      E1000_RSSRK(0), i, htonl(sym_rsk[i]));
 #endif
-               } else
-                       for (int i = 0; i < 10; i++)
-                               E1000_WRITE_REG_ARRAY(hw,
-                                                     E1000_RSSRK(0), i, random[i]);
+                } else
+                        for (int i = 0; i < 10; i++)
+                                E1000_WRITE_REG_ARRAY(hw,
+                                                      E1000_RSSRK(0), i, random[i]);
 
 		mrqc |= (E1000_MRQC_RSS_FIELD_IPV4 |
 		    E1000_MRQC_RSS_FIELD_IPV4_TCP);
