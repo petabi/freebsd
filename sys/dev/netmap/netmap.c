@@ -1215,6 +1215,9 @@ netmap_rxsync_from_host(struct netmap_adapter *na, struct thread *td, void *pwai
 
 			slot->len = len;
 			slot->flags = kring->nkr_slot_flags;
+			/* Petabi: set offloading flag */
+			if (m->m_pkthdr.csum_flags & (CSUM_UDP | CSUM_TCP))
+				slot->flags |= NS_OFFLOAD_CSUM;
 			nm_i = nm_next(nm_i, lim);
 			mbq_enqueue(&fq, m);
 		}
