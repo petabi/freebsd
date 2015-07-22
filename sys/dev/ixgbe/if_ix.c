@@ -271,7 +271,7 @@ static SYSCTL_NODE(_hw, OID_AUTO, ix, CTLFLAG_RD, 0,
 */
 /*
 ** Petabi turn off enable_aim by default, this solves pius slow down
-** issue by too many interrpts
+** issue by too many interrupts
 */
 static int ixgbe_enable_aim = FALSE;
 TUNABLE_INT("hw.ix.enable_aim", &ixgbe_enable_aim);
