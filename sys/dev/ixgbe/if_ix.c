@@ -270,7 +270,8 @@ static SYSCTL_NODE(_hw, OID_AUTO, ix, CTLFLAG_RD, 0,
 ** is varied over time based on the
 ** traffic for that interrupt vector
 */
-static int ixgbe_enable_aim = TRUE;
+/* Petabi turn off enable_aim by default */
+static int ixgbe_enable_aim = FALSE;
 SYSCTL_INT(_hw_ix, OID_AUTO, enable_aim, CTLFLAG_RWTUN, &ixgbe_enable_aim, 0,
     "Enable adaptive interrupt moderation");
 
