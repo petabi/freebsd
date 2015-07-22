@@ -243,7 +243,10 @@ static SYSCTL_NODE(_hw, OID_AUTO, ix, CTLFLAG_RD, 0,
 ** is varied over time based on the
 ** traffic for that interrupt vector
 */
-/* Petabi turn off enable_aim by default */
+/*
+** Petabi turn off enable_aim by default, this solves pius slow down
+** issue by too many interrpts
+*/
 static int ixgbe_enable_aim = FALSE;
 TUNABLE_INT("hw.ix.enable_aim", &ixgbe_enable_aim);
 SYSCTL_INT(_hw_ix, OID_AUTO, enable_aim, CTLFLAG_RW, &ixgbe_enable_aim, 0,
