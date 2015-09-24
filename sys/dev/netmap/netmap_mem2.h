@@ -136,10 +136,6 @@ struct netmap_mem_d* netmap_mem_private_new(const char *name,
 	int* error);
 void	   netmap_mem_private_delete(struct netmap_mem_d *);
 
-/* Petabi extension */
-uint32_t netmap_malloc_buf_list(struct netmap_mem_d *nm_mem, uint32_t *buf, uint32_t buf_size);
-void netmap_free_buf_list(struct netmap_mem_d *nm_mem, uint32_t *buf, uint32_t buf_size);
-
 #define NETMAP_MEM_PRIVATE	0x2	/* allocator uses private address space */
 #define NETMAP_MEM_IO		0x4	/* the underlying memory is mmapped I/O */
 
