@@ -508,10 +508,6 @@ struct nmreq {
 	uint32_t	nr_flags;
 	/* various modes, extends nr_ringid */
 	uint32_t	spare2[1];
-
-	/* Petabi: for free buffer allocation */
-	uint32_t *buf_addr;
-	uint32_t  buf_size;
 };
 
 #define NR_REG_MASK		0xf /* values for nr_flags */
@@ -543,9 +539,6 @@ enum {	NR_REG_DEFAULT	= 0,	/* backward compat, should not be used. */
 #define NIOCTXSYNC	_IO('i', 148) /* sync tx queues */
 #define NIOCRXSYNC	_IO('i', 149) /* sync rx queues */
 #define NIOCCONFIG	_IOWR('i',150, struct nm_ifreq) /* for ext. modules */
-/* Petabi: for free buffer allocation */
-#define NIOCGBUF	_IOWR('i', 151, struct nmreq)
-#define NIOCFBUF	_IOWR('i', 152, struct nmreq)
 #endif /* !NIOCREGIF */
 
 
