@@ -2105,7 +2105,6 @@ netmap_ioctl(struct cdev *dev, u_long cmd, caddr_t data,
 	u_int i, qfirst, qlast;
 	struct netmap_if *nifp;
 	struct netmap_kring *krings;
-	uint32_t *buf_list; /* Petabi: for free buffer allocation */
 	enum txrx t;
 
 	(void)dev;	/* UNUSED */
@@ -2312,43 +2311,6 @@ netmap_ioctl(struct cdev *dev, u_long cmd, caddr_t data,
 		error = netmap_bdg_config(nmr);
 		break;
 #endif
-
-	/* Petabi: for free buffer allocation */
-	case NIOCGBUF:
-	case NIOCFBUF:
-		/* copy from NIOCRXSYNC */
-		nifp = priv->np_nifp;
-
-		if (nifp == NULL) {
-			error = ENXIO;
-			break;
-		}
-		rmb(); /* make sure following reads are not from cache */
-
-		na = priv->np_na;      /* we have a reference */
-
-		buf_list = malloc(sizeof(uint32_t) * nmr->buf_size,
-				  M_DEVBUF, M_NOWAIT | M_ZERO);
-		if (cmd == NIOCGBUF) {
-			nmr->buf_size = netmap_malloc_buf_list(na->nm_mem, buf_list, nmr->buf_size);
-			/* error = copy_to_user(nmr->buf_addr, buf_list, */
-			/*                      sizeof(uint32_t) * nmr->buf_size); */
-			error = copyout(buf_list, nmr->buf_addr,
-					sizeof(uint32_t) * nmr->buf_size);
-
-		} else if (cmd == NIOCFBUF) {
-			/* error = copy_from_user(buf_list, nmr->buf_addr, */
-			/*                        sizeof(uint32_t) * nmr->buf_size); */
-
-			error = copyin(nmr->buf_addr, buf_list,
-				       sizeof(uint32_t) * nmr->buf_size);
-
-			netmap_free_buf_list(na->nm_mem, buf_list, nmr->buf_size);
-		}
-
-		free(buf_list, M_DEVBUF);
-		break;
-
 #ifdef __FreeBSD__
 	case FIONBIO:
 	case FIOASYNC:
