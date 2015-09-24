@@ -124,7 +124,7 @@ em_netmap_txsync(struct netmap_kring *kring, int flags)
 	u_int const lim = kring->nkr_num_slots - 1;
 	u_int const head = kring->rhead;
 	u32 txd_upper = 0, txd_lower = 0;
-				
+
 	/* generate an interrupt approximately every half ring */
 	u_int report_frequency = kring->nkr_num_slots >> 1;
 
