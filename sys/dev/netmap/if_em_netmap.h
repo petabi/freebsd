@@ -157,51 +157,51 @@ em_netmap_txsync(struct netmap_kring *kring, int flags)
 
 			NM_CHECK_ADDR_LEN(na, addr, len);
 
-                        /* Petabi: set offloading context */
-                        if ((slot->flags & NS_OFFLOAD_CSUM) && slot->ptr) {
-                                struct e1000_context_desc *TXD;
-                                int ip_off, ip_hlen = 0, hdr_len = 0;
-                                u8 tucso = 0, tucss = 0;
-                                u32 cmd = 0;
+			/* Petabi: set offloading context */
+			if ((slot->flags & NS_OFFLOAD_CSUM) && slot->ptr) {
+				struct e1000_context_desc *TXD;
+				int ip_off, ip_hlen = 0, hdr_len = 0;
+				u8 tucso = 0, tucss = 0;
+				u32 cmd = 0;
 
-                                ip_off = ETHER_HDR_LEN;
-                                ip_hlen = slot->ptr & 0x7f;
-                                hdr_len = ip_off + ip_hlen;
+				ip_off = ETHER_HDR_LEN;
+				ip_hlen = slot->ptr & 0x7f;
+				hdr_len = ip_off + ip_hlen;
 
-                                TXD = (struct e1000_context_desc *)curr;
+				TXD = (struct e1000_context_desc *)curr;
 
-                                /*
-                                 * we only setup TCP/UDP offloading. The reason why
-                                 * we don't setup IP checksum offloading is it's already
-                                 * been computed in OS
-                                 */
-                                tucss = hdr_len;
-                                if (slot->ptr & 0x80) {
-                                        tucso = hdr_len + offsetof(struct tcphdr, th_sum);
-                                        cmd |= E1000_TXD_CMD_TCP;
-                                } else {
-                                        tucso = hdr_len + offsetof(struct udphdr, uh_sum);
-                                }
+				/*
+				 * we only setup TCP/UDP offloading. The reason why
+				 * we don't setup IP checksum offloading is it's already
+				 * been computed in OS
+				 */
+				tucss = hdr_len;
+				if (slot->ptr & 0x80) {
+					tucso = hdr_len + offsetof(struct tcphdr, th_sum);
+					cmd |= E1000_TXD_CMD_TCP;
+				} else {
+					tucso = hdr_len + offsetof(struct udphdr, uh_sum);
+				}
 
-                                TXD->upper_setup.tcp_fields.tucss = hdr_len;
-                                TXD->upper_setup.tcp_fields.tucse = htole16(0);
-                                TXD->upper_setup.tcp_fields.tucso = tucso;
-                                TXD->tcp_seg_setup.data = htole32(0);
-                                TXD->cmd_and_length =
-                                     htole32(adapter->txd_cmd | E1000_TXD_CMD_DEXT | cmd);
-                                nm_i = nm_next(nm_i, lim);
-                                nic_i = nm_next(nic_i, lim);
+				TXD->upper_setup.tcp_fields.tucss = hdr_len;
+				TXD->upper_setup.tcp_fields.tucse = htole16(0);
+				TXD->upper_setup.tcp_fields.tucso = tucso;
+				TXD->tcp_seg_setup.data = htole32(0);
+				TXD->cmd_and_length =
+				    htole32(adapter->txd_cmd | E1000_TXD_CMD_DEXT | cmd);
+				nm_i = nm_next(nm_i, lim);
+				nic_i = nm_next(nic_i, lim);
 
-                                slot->flags &= ~NS_OFFLOAD_CSUM;
+				slot->flags &= ~NS_OFFLOAD_CSUM;
 				slot->ptr = 0;
-                                continue;
-                        }
+				continue;
+			}
 
-                        if (slot->flags & NS_OFFLOAD_CSUM) {
-                                txd_lower = E1000_TXD_CMD_DEXT | E1000_TXD_DTYP_D;
-                                txd_upper |= E1000_TXD_POPTS_TXSM << 8;
-                                slot->flags &= ~NS_OFFLOAD_CSUM;
-                        }
+			if (slot->flags & NS_OFFLOAD_CSUM) {
+				txd_lower = E1000_TXD_CMD_DEXT | E1000_TXD_DTYP_D;
+				txd_upper |= E1000_TXD_POPTS_TXSM << 8;
+				slot->flags &= ~NS_OFFLOAD_CSUM;
+			}
 
 			if (slot->flags & NS_BUF_CHANGED) {
 				curr->buffer_addr = htole64(paddr);
