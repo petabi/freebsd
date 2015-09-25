@@ -206,6 +206,8 @@ struct netmap_slot {
 	 * Petabi: for setting checksum offloading context
 	 * Keep this flag for compatibility. It will be delete later.
 	 */
+#define NS_BROADCAST	0x0080
+	/* Petabi: set broadcast packet */
 
 #define	NS_PORT_SHIFT	8
 #define	NS_PORT_MASK	(0xff << NS_PORT_SHIFT)
