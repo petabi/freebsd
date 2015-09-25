@@ -158,7 +158,7 @@ em_netmap_txsync(struct netmap_kring *kring, int flags)
 			NM_CHECK_ADDR_LEN(na, addr, len);
 
                         /* Petabi: set offloading context */
-                        if (slot->flags & NS_OFFLOAD_CTX) {
+                        if ((slot->flags & NS_OFFLOAD_CSUM) && slot->ptr) {
                                 struct e1000_context_desc *TXD;
                                 int ip_off, ip_hlen = 0, hdr_len = 0;
                                 u8 tucso = 0, tucss = 0;
@@ -192,7 +192,8 @@ em_netmap_txsync(struct netmap_kring *kring, int flags)
                                 nm_i = nm_next(nm_i, lim);
                                 nic_i = nm_next(nic_i, lim);
 
-                                slot->flags &= ~NS_OFFLOAD_CTX;
+                                slot->flags &= ~NS_OFFLOAD_CSUM;
+				slot->ptr = 0;
                                 continue;
                         }
 
