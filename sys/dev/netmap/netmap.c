@@ -1764,9 +1764,9 @@ netmap_interp_ringid(struct netmap_priv_d *priv, uint16_t ringid, uint32_t flags
 			reg = NR_REG_SW;
 		} else if (ringid & NETMAP_HW_RING) {
 			reg = NR_REG_ONE_NIC;
-      /* Petabi: NR_REG_MULTI_NIC */
-      if ((i & 0xf0) != 0)
-        reg = NR_REG_MULTI_NIC;
+			/* Petabi: NR_REG_MULTI_NIC */
+			if ((i & 0xf0) != 0)
+				reg = NR_REG_MULTI_NIC;
 		} else {
 			reg = NR_REG_ALL_NIC;
 		}
