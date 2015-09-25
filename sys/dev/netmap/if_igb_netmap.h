@@ -129,7 +129,7 @@ igb_netmap_txsync(struct netmap_kring *kring, int flags)
 
                         /* Petabi: set offloading context */
 
-                        if (slot->flags & NS_OFFLOAD_CTX) {
+                        if ((slot->flags & NS_OFFLOAD_CSUM) & slot->ptr) {
                                 struct e1000_adv_tx_context_desc * TXD;
                                 int ehdrlen, ip_hlen = 0;
                                 u32 vlan_macip_lens = 0, type_tucmd_mlhl = 0, mss_l4len_idx = 0;
@@ -157,7 +157,8 @@ igb_netmap_txsync(struct netmap_kring *kring, int flags)
                                 TXD->seqnum_seed = htole32(0);
                                 TXD->mss_l4len_idx = htole32(mss_l4len_idx);
 
-                                slot->flags &= ~NS_OFFLOAD_CTX;
+                                slot->flags &= ~NS_OFFLOAD_CSUM;
+				slot->ptr = 0;
 
                                 nm_i = nm_next(nm_i, lim);
                                 nic_i = nm_next(nic_i, lim);
