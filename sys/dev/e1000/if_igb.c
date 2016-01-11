@@ -353,6 +353,12 @@ TUNABLE_INT("hw.igb.enable_symmetric_rss", &igb_enable_symmetric_rss);
 SYSCTL_INT(_hw_igb, OID_AUTO, enable_symmetric_rss, CTLFLAG_RDTUN, &igb_enable_symmetric_rss, 0,
     "Enable Symmetric Rss Hashing");
 
+/* Petabi: Configure redirection table */
+static unsigned int igb_redirection = 0x1;
+TUNABLE_INT("hw.igb.redirection", &igb_redirection);
+SYSCTL_INT(_hw_igb, OID_AUTO, redirection, CTLFLAG_RDTUN, &igb_redirection, 0,
+           "Configure redirection table entry");
+
 #ifdef DEV_NETMAP	/* see ixgbe.c for details */
 #include <dev/netmap/if_igb_netmap.h>
 #endif /* DEV_NETMAP */
@@ -4553,9 +4559,18 @@ igb_initialize_receive_units(struct adapter *adapter)
 		if (adapter->hw.mac.type == e1000_82575)
 			shift = 6;
 		/* Warning FM follows */
-		for (int i = 0; i < 128; i++) {
+		for (int i = 0, j = 0; i < 128; i++, j++) {
+			if (j == adapter->num_queues) j = 0; /* Petabi */
+
+			/* Petabi */
+			for (int k = 0; k < adapter->num_queues; k++) {
+				if ((0x1 << j) & igb_redirection)
+					break;
+				j = (j + 1) % adapter->num_queues;
+			}
+
 			reta.bytes[i & 3] =
-			    (i % adapter->num_queues) << shift;
+			    (j % adapter->num_queues) << shift; /* Petabi */
 			if ((i & 3) == 3)
 				E1000_WRITE_REG(hw,
 				    E1000_RETA(i >> 2), reta.dword);
