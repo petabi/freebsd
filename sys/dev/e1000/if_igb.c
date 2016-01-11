@@ -348,6 +348,12 @@ TUNABLE_INT("hw.igb.enable_symmetric_rss", &igb_enable_symmetric_rss);
 SYSCTL_INT(_hw_igb, OID_AUTO, enable_symmetric_rss, CTLFLAG_RDTUN, &igb_enable_symmetric_rss, 0,
     "Enable Symmetric Rss Hashing");
 
+/* Petabi: Configure redirection table */
+static unsigned int igb_redirection = 0x1;
+TUNABLE_INT("hw.igb.redirection", &igb_redirection);
+SYSCTL_INT(_hw_igb, OID_AUTO, redirection, CTLFLAG_RDTUN, &igb_redirection, 0,
+           "Configure redirection table entry");
+
 #ifdef DEV_NETMAP	/* see ixgbe.c for details */
 #include <dev/netmap/if_igb_netmap.h>
 #endif /* DEV_NETMAP */
@@ -4577,9 +4583,17 @@ igb_initialise_rss_mapping(struct adapter *adapter)
 
 	/* Warning FM follows */
 	reta = 0;
-	for (i = 0; i < 128; i++) {
+	for (int i = 0, j = 0; i < 128; i++, j++) {
+		if (j == adapter->num_queues) j = 0; /* Petabi */
+
+		/* Petabi */
+		for (int k = 0; k < adapter->num_queues; k++) {
+			if ((0x1 << j) & igb_redirection)
+				break;
+			j = (j + 1) % adapter->num_queues;
+		}
 #ifdef	RSS
-		queue_id = rss_get_indirection_to_bucket(i);
+		queue_id = rss_get_indirection_to_bucket(j); /* Petabi */
 		/*
 		 * If we have more queues than buckets, we'll
 		 * end up mapping buckets to a subset of the
@@ -4595,7 +4609,7 @@ igb_initialise_rss_mapping(struct adapter *adapter)
 		 */
 		queue_id = queue_id % adapter->num_queues;
 #else
-		queue_id = (i % adapter->num_queues);
+		queue_id = (j % adapter->num_queues); /* Petabi */
 #endif
 		/* Adjust if required */
 		queue_id = queue_id << shift;
