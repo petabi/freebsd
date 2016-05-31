@@ -940,12 +940,14 @@ netmap_do_unregif(struct netmap_priv_d *priv)
 		 * we order all activities to stop. -gl
 		 */
 		/* delete rings and buffers */
+		D("deleting rings for %s", na->name); /* Petabi */
 		netmap_mem_rings_delete(na);
 		na->nm_krings_delete(na);
 	}
 	/* possibily decrement counter of tx_si/rx_si users */
 	netmap_unset_ringid(priv);
 	/* delete the nifp */
+	D("deleting nifp for %s", na->name); /* Petabi */
 	netmap_mem_if_delete(na, priv->np_nifp);
 	/* drop the allocator */
 	netmap_mem_deref(na->nm_mem, na);
