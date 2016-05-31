@@ -1018,10 +1018,12 @@ netmap_do_unregif(struct netmap_priv_d *priv, struct netmap_if *nifp)
 		netmap_knlist_destroy(&na->rx_si);
 
 		/* delete rings and buffers */
+		D("deleting rings for %s", na->name); /* Petabi */
 		netmap_mem_rings_delete(na);
 		na->nm_krings_delete(na);
 	}
 	/* delete the nifp */
+	D("deleting nifp for %s", na->name); /* Petabi */
 	netmap_mem_if_delete(na, nifp);
 }
 
