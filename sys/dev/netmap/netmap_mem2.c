@@ -100,6 +100,7 @@ struct netmap_obj_pool {
 	u_int _clustsize;       /* cluster size */
 	u_int _clustentries;    /* objects per cluster */
 	u_int _numclusters;	/* number of clusters */
+	u_int _numdoublefree;   /* number of double free (Petabi) */
 
 	/* requested values */
 	u_int r_objtotal;
@@ -563,7 +564,8 @@ netmap_obj_free(struct netmap_obj_pool *p, uint32_t j)
 	ptr = &p->bitmap[j / 32];
 	mask = (1 << (j % 32));
 	if (*ptr & mask) {
-		D("ouch, double free on buffer %d", j);
+		/* D("ouch, double free on buffer %d", j); */ /* Petabi */
+		p->_numdoublefree++; /* Petabi */
 		return 1;
 	} else {
 		*ptr |= mask;
@@ -665,6 +667,8 @@ netmap_extra_free(struct netmap_adapter *na, uint32_t head)
 	if (head != 0)
 		D("breaking with head %d", head);
 	D("freed %d buffers", i);
+	if (p->_numdoublefree > 0) /* Petabi */
+		D("netmap_extra_free : number of double free = %d", p->_numdoublefree);
 }
 
 
@@ -872,6 +876,7 @@ netmap_config_obj_allocator(struct netmap_obj_pool *p, u_int objtotal, u_int obj
 	/* actual values (may be larger than requested) */
 	p->_objsize = objsize;
 	p->_objtotal = p->_numclusters * clustentries;
+	p->_numdoublefree = 0; /* Petabi */
 
 	return 0;
 }
@@ -1324,6 +1329,10 @@ netmap_free_rings(struct netmap_adapter *na)
 		netmap_ring_free(na->nm_mem, ring);
 		kring->ring = NULL;
 	}
+
+	struct netmap_obj_pool *p = &na->nm_mem->pools[NETMAP_BUF_POOL];
+	if (p->_numdoublefree > 0) /* Petabi */
+		D("nemap_free_rings : number of double free = %d", p->_numdoublefree);
 }
 
 /* call with NMA_LOCK held *
