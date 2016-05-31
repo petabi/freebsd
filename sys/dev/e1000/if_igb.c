@@ -705,19 +705,19 @@ igb_detach(device_t dev)
 	INIT_DEBUGOUT("igb_detach: begin");
 
 	/* Make sure VLANS are not using driver */
-	if (adapter->ifp && adapter->ifp->if_vlantrunk != NULL) {
+	if (ifp && adapter->ifp->if_vlantrunk != NULL) { /* Petabi */
 		device_printf(dev,"Vlan in use, detach first\n");
 		return (EBUSY);
 	}
 
-	if (adapter->ifp)
+	if (ifp) /* Petabi */
 		ether_ifdetach(adapter->ifp);
 
 	if (adapter->led_dev != NULL)
 		led_destroy(adapter->led_dev);
 
 #ifdef DEVICE_POLLING
-	if (ifp && ifp->if_capenable & IFCAP_POLLING)
+	if (ifp && ifp->if_capenable & IFCAP_POLLING) /* Petabi */
 		ether_poll_deregister(ifp);
 #endif
 
@@ -747,12 +747,12 @@ igb_detach(device_t dev)
 	callout_drain(&adapter->timer);
 
 #ifdef DEV_NETMAP
-	if (ifp)
+	if (ifp) /* Petabi */
 		netmap_detach(adapter->ifp);
 #endif /* DEV_NETMAP */
 	igb_free_pci_resources(adapter);
 	bus_generic_detach(dev);
-	if (ifp)
+	if (ifp) /* Petabi */
 		if_free(ifp);
 
 	igb_free_transmit_structures(adapter);
@@ -2294,7 +2294,7 @@ igb_stop(void *arg)
 	callout_stop(&adapter->timer);
 
 	/* Tell the stack that the interface is no longer active */
-	if (ifp) {
+	if (ifp) { /* Petabi */
 		ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 		ifp->if_drv_flags |= IFF_DRV_OACTIVE;
         }
@@ -3712,7 +3712,7 @@ static void
 igb_free_transmit_structures(struct adapter *adapter)
 {
 	struct tx_ring *txr = adapter->tx_rings;
-	if (!txr)
+	if (!txr) /* Petabi */
 		return;
 
 	for (int i = 0; i < adapter->num_queues; i++, txr++) {
@@ -3723,7 +3723,7 @@ igb_free_transmit_structures(struct adapter *adapter)
 		IGB_TX_LOCK_DESTROY(txr);
 	}
 	free(adapter->tx_rings, M_DEVBUF);
-	adapter->tx_rings = NULL;
+	adapter->tx_rings = NULL; /* Petabi */
 }
 
 /*********************************************************************
@@ -4865,7 +4865,7 @@ static void
 igb_free_receive_structures(struct adapter *adapter)
 {
 	struct rx_ring *rxr = adapter->rx_rings;
-	if (!rxr)
+	if (!rxr) /* Petabi */
 		return;
 
 	for (int i = 0; i < adapter->num_queues; i++, rxr++) {
@@ -4876,7 +4876,7 @@ igb_free_receive_structures(struct adapter *adapter)
 	}
 
 	free(adapter->rx_rings, M_DEVBUF);
-	adapter->rx_rings = NULL;
+	adapter->rx_rings = NULL; /* Petabi */
 }
 
 /*********************************************************************
