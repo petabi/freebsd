@@ -3141,6 +3141,12 @@ ixgbe_initialize_rss_mapping(struct adapter *adapter)
 	/* Set up the redirection table */
 	for (int i = 0, j = 0; i < table_size; i++, j++) {
 		if (j == adapter->num_queues) j = 0;
+		/* Petabi */
+		for (int k = 0; k < adapter->num_queues; k++) {
+			if ((0x1 << j) & ixgbe_redirection)
+				break;
+			j = (j + 1) % adapter->num_queues;
+		}
 #ifdef	RSS
 		/*
 		 * Fetch the RSS bucket id for the given indirection entry.
@@ -3152,12 +3158,6 @@ ixgbe_initialize_rss_mapping(struct adapter *adapter)
 #else
 		queue_id = (j * index_mult);
 #endif
-		/* Petabi */
-		for (int k = 0; k < adapter->num_queues; k++) {
-			if ((0x1 << j) & ixgbe_redirection)
-				break;
-			j = (j + 1) % adapter->num_queues;
-		}
 		/*
 		 * The low 8 bits are for hash value (n+0);
 		 * The next 8 bits are for hash value (n+1), etc.
