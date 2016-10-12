@@ -2790,13 +2790,13 @@ ixgbe_initialise_rss_mapping(struct adapter *adapter)
 	/* Set up the redirection table */
 	for (i = 0, j = 0; i < table_size; i++, j++) {
 		if (j == adapter->num_queues) j = 0;
-		queue_id = (j * index_mult);
 		/* Petabi */
 		for (int k = 0; k < adapter->num_queues; k++) {
 			if ((0x1 << j) & ixgbe_redirection)
 				break;
 			j = (j + 1) % adapter->num_queues;
 		}
+		queue_id = (j * index_mult);
 		/*
 		 * The low 8 bits are for hash value (n+0);
 		 * The next 8 bits are for hash value (n+1), etc.
