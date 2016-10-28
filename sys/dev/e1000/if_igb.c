@@ -4662,12 +4662,12 @@ igb_initialise_rss_mapping(struct adapter *adapter)
 			    E1000_RSSRK(0), i, sym_rsk[i]);
 #else
 			E1000_WRITE_REG_ARRAY(hw,
-			    E1000_RSSRK(0), i, htonl(rss_key[i]));
+			    E1000_RSSRK(0), i, htonl(sym_rsk[i]));
 #endif
         } else
 		for (int i = 0; i < 10; i++)
 			E1000_WRITE_REG_ARRAY(hw,
-			    E1000_RSSRK(0), i, random[i]);
+			    E1000_RSSRK(0), i, rss_key[i]);
 
 	/*
 	 * Configure the RSS fields to hash upon.
