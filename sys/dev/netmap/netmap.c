@@ -1731,10 +1731,10 @@ netmap_interp_ringid(struct netmap_priv_d *priv, uint16_t ringid, uint32_t flags
 			D("invalid ring id %d", i);
 			return EINVAL;
 		}
-		priv->np_txqfirst = (i >= na->num_tx_rings) ? na->num_tx_rings - 1 : i;
-		priv->np_txqlast = (j > na->num_tx_rings) ? na->num_tx_rings : j;
-		priv->np_rxqfirst = (i >= na->num_rx_rings) ? na->num_rx_rings - 1: i;
-		priv->np_rxqlast = (j > na->num_rx_rings) ? na->num_rx_rings : j;
+		priv->np_qfirst[NR_TX] = (i >= na->num_tx_rings) ? na->num_tx_rings - 1 : i;
+		priv->np_qlast[NR_TX] = (j > na->num_tx_rings) ? na->num_tx_rings : j;
+		priv->np_qfirst[NR_RX] = (i >= na->num_rx_rings) ? na->num_rx_rings - 1: i;
+		priv->np_qlast[NR_RX] = (j > na->num_rx_rings) ? na->num_rx_rings : j;
 		break;
 	default:
 		D("invalid regif type %d", reg);
