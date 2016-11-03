@@ -1621,70 +1621,31 @@ netmap_mem_global_deref(struct netmap_mem_d *nmd)
 
 }
 
-int
-netmap_mem_finalize(struct netmap_mem_d *nmd, struct netmap_adapter *na)
-{
-	if (nm_mem_assign_group(nmd, na->pdev) < 0) {
-		return ENOMEM;
-	} else {
-		NMA_LOCK(nmd);
-		nmd->finalize(nmd);
-		NMA_UNLOCK(nmd);
-	}
-
-	if (!nmd->lasterr && na->pdev)
-		netmap_mem_map(&nmd->pools[NETMAP_BUF_POOL], na);
-
-	return nmd->lasterr;
-}
-
-void
-netmap_mem_deref(struct netmap_mem_d *nmd, struct netmap_adapter *na)
-{
-	NMA_LOCK(nmd);
-	netmap_mem_unmap(&nmd->pools[NETMAP_BUF_POOL], na);
-	if (nmd->refcount == 1) {
-		u_int i;
-
-		/*
-		 * Reset the allocator when it falls out of use so that any
-		 * pool resources leaked by unclean application exits are
-		 * reclaimed.
-		 */
-		for (i = 0; i < NETMAP_POOLS_NR; i++) {
-			struct netmap_obj_pool *p;
-			u_int j;
-			
-			p = &nmd->pools[i];
-			p->objfree = p->objtotal;
-			/*
-			 * Reproduce the net effect of the M_ZERO malloc()
-			 * and marking of free entries in the bitmap that
-			 * occur in finalize_obj_allocator()
-			 */
-			memset(p->bitmap,
-			    '\0',
-			    sizeof(uint32_t) * ((p->objtotal + 31) / 32));
-			
-			/*
-			 * Set all the bits in the bitmap that have
-			 * corresponding buffers to 1 to indicate they are
-			 * free.
-			 */
-			for (j = 0; j < p->objtotal; j++) {
-				if (p->lut[j].vaddr != NULL) {
-					p->bitmap[ (j>>5) ] |=  ( 1 << (j & 31) );
-				}
-			}
-		}
-
-		/*
-		 * Per netmap_mem_finalize_all(),
-		 * buffers 0 and 1 are reserved
-		 */
-		nmd->pools[NETMAP_BUF_POOL].objfree -= 2;
-		nmd->pools[NETMAP_BUF_POOL].bitmap[0] = ~3;
-	}
-	nmd->deref(nmd);
-	NMA_UNLOCK(nmd);
-}
+struct netmap_mem_ops netmap_mem_global_ops = {
+	.nmd_get_lut = netmap_mem2_get_lut,
+	.nmd_get_info = netmap_mem2_get_info,
+	.nmd_ofstophys = netmap_mem2_ofstophys,
+	.nmd_config = netmap_mem_global_config,
+	.nmd_finalize = netmap_mem_global_finalize,
+	.nmd_deref = netmap_mem_global_deref,
+	.nmd_delete = netmap_mem_global_delete,
+	.nmd_if_offset = netmap_mem2_if_offset,
+	.nmd_if_new = netmap_mem2_if_new,
+	.nmd_if_delete = netmap_mem2_if_delete,
+	.nmd_rings_create = netmap_mem2_rings_create,
+	.nmd_rings_delete = netmap_mem2_rings_delete
+};
+struct netmap_mem_ops netmap_mem_private_ops = {
+	.nmd_get_lut = netmap_mem2_get_lut,
+	.nmd_get_info = netmap_mem2_get_info,
+	.nmd_ofstophys = netmap_mem2_ofstophys,
+	.nmd_config = netmap_mem_private_config,
+	.nmd_finalize = netmap_mem_private_finalize,
+	.nmd_deref = netmap_mem_private_deref,
+	.nmd_if_offset = netmap_mem2_if_offset,
+	.nmd_delete = netmap_mem_private_delete,
+	.nmd_if_new = netmap_mem2_if_new,
+	.nmd_if_delete = netmap_mem2_if_delete,
+	.nmd_rings_create = netmap_mem2_rings_create,
+	.nmd_rings_delete = netmap_mem2_rings_delete
+};
