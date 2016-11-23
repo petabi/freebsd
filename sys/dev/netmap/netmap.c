@@ -2184,8 +2184,9 @@ netmap_ioctl(struct cdev *dev, u_long cmd, caddr_t data,
 				|| i == NETMAP_BDG_DELIF) {
 			error = netmap_bdg_ctl(nmr, NULL);
 			break;
-		} else if (i != 0) {
-			D("nr_cmd must be 0 not %d", i);
+		} else if (i != 0 && i != NETMAP_BDG_GLOBAL) { /* Petabi */
+			/* Petabi TODO : consider merging this into netmap_bdg_ctl */
+			D("nr_cmd must be 0 or %d not %d", NETMAP_BDG_GLOBAL, i);
 			error = EINVAL;
 			break;
 		}

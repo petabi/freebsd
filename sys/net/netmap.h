@@ -505,6 +505,7 @@ struct nmreq {
 #define NETMAP_BDG_OFFSET	NETMAP_BDG_VNET_HDR	/* deprecated alias */
 #define NETMAP_BDG_NEWIF	6	/* create a virtual port */
 #define NETMAP_BDG_DELIF	7	/* destroy a virtual port */
+#define NETMAP_BDG_GLOBAL	8	/* use global memory map (Petabi) */
 	uint16_t	nr_arg1;	/* reserve extra rings in NIOCREGIF */
 #define NETMAP_BDG_HOST		1	/* attach the host stack on ATTACH */
 

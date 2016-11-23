@@ -665,8 +665,8 @@ netmap_get_bdg_na(struct nmreq *nmr, struct netmap_adapter **na, int create)
 		/* Create an ephemeral virtual port
 		 * This block contains all the ephemeral-specific logics
 		 */
-		if (nmr->nr_cmd) {
-			/* nr_cmd must be 0 for a virtual port */
+		if (nmr->nr_cmd && nmr->nr_cmd != NETMAP_BDG_GLOBAL) {
+			/* nr_cmd must be 0 or NETMAP_BDG_GLOBAL for a virtual port */
 			return EINVAL;
 		}
 
@@ -1823,7 +1823,12 @@ netmap_vp_create(struct nmreq *nmr, struct ifnet *ifp, struct netmap_vp_adapter 
 	na->nm_krings_create = netmap_vp_krings_create;
 	na->nm_krings_delete = netmap_vp_krings_delete;
 	na->nm_dtor = netmap_vp_dtor;
-	na->nm_mem = netmap_mem_private_new(na->name,
+	if (nmr->nr_cmd == NETMAP_BDG_GLOBAL) { /* Petabi */
+		na->nm_mem = &nm_mem;
+		D("vale port %s is using global nm_mem", na->name);
+		/* netmap_mem_get is done in netmap_attach_common */
+	} else
+		na->nm_mem = netmap_mem_private_new(na->name,
 			na->num_tx_rings, na->num_tx_desc,
 			na->num_rx_rings, na->num_rx_desc,
 			nmr->nr_arg3, npipes, &error);
@@ -1838,8 +1843,12 @@ netmap_vp_create(struct nmreq *nmr, struct ifnet *ifp, struct netmap_vp_adapter 
 	return 0;
 
 err:
-	if (na->nm_mem != NULL)
-		netmap_mem_delete(na->nm_mem);
+	if (na->nm_mem != NULL) {
+		if (na->nm_mem == &nm_mem) /* Petabi */
+			netmap_mem_put(na->nm_mem);
+		else
+			netmap_mem_delete(na->nm_mem);
+	}
 	free(vpna, M_DEVBUF);
 	return error;
 }
