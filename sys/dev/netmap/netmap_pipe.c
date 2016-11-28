@@ -536,6 +536,9 @@ netmap_get_pipe_na(struct nmreq *nmr, struct netmap_adapter **na, int create)
 	memcpy(&pnmr.nr_name, nmr->nr_name, IFNAMSIZ);
 	/* pass to parent the requested number of pipes */
 	pnmr.nr_arg1 = nmr->nr_arg1;
+	if (nmr->nr_cmd == NETMAP_BDG_GLOBAL) { /* Petabi */
+		pnmr.nr_cmd = nmr->nr_cmd;
+	}
 	error = netmap_get_na(&pnmr, &pna, create);
 	if (error) {
 		ND("parent lookup failed: %d", error);
