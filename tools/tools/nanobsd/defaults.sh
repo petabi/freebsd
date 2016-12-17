@@ -580,6 +580,7 @@ setup_nanobsd_etc ( ) (
 	(
 	cd "${NANO_WORLDDIR}"
 
+        # Petabi disable diskless mode
 	# create diskless marker file
 	touch etc/diskless
 
