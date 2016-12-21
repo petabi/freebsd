@@ -580,6 +580,9 @@ setup_nanobsd_etc ( ) (
 	(
 	cd "${NANO_WORLDDIR}"
 
+        # Petabi note: for FreeBSD version before 11.0, we have to disable diskless
+        # mode, but in 11.0, if we disable, the image fails to boot. Thus we do the
+        # following command to enable.
 	# create diskless marker file
 	touch etc/diskless
 
