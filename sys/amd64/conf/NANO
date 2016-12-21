@@ -18,6 +18,8 @@
 #
 # $FreeBSD$
 
+# Petabi nanobsd config file for FreeBSD kernel 11.0v0
+
 cpu		HAMMER
 ident		NANO
 
