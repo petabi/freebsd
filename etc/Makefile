@@ -295,6 +295,9 @@ distribution:
 
 	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
 	    ${.CURDIR}/ssl/cert.pem ${DESTDIR}/etc/ssl
+
+	cd ${.CURDIR}; ${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 \
+	    ${.CURDIR}/ssl/pkg.cert ${DESTDIR}/etc/ssl
 # Petabi: End
 
 .if ${MK_KERBEROS} != "no"
