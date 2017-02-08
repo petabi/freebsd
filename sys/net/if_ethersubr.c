@@ -838,6 +838,10 @@ ether_demux(struct ifnet *ifp, struct mbuf *m)
 		}
 		isr = NETISR_ARP;
 		break;
+
+	case ETHERTYPE_REGORUS:
+		isr = NETISR_REGORUS;
+		break;
 #endif
 #ifdef INET6
 	case ETHERTYPE_IPV6:

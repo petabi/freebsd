@@ -1,0 +1,6 @@
+# REGORUS -- kernel config for REGORUS detection & mgmt driver
+
+include		GENERIC
+ident		REGORUS
+
+#device		regorus

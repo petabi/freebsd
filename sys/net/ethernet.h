@@ -120,6 +120,7 @@ struct ether_vlan_header {
 #define	ETHERTYPE_UBDEBUG	0x0900	/* Ungermann-Bass network debugger */
 #define	ETHERTYPE_IEEEPUP	0x0A00	/* Xerox IEEE802.3 PUP */
 #define	ETHERTYPE_IEEEPUPAT	0x0A01	/* Xerox IEEE802.3 PUP Address Translation */
+#define	ETHERTYPE_REGORUS	0x0B00  /* Petabi REGORUS */
 #define	ETHERTYPE_VINES 	0x0BAD	/* Banyan VINES */
 #define	ETHERTYPE_VINESLOOP	0x0BAE	/* Banyan VINES Loopback */
 #define	ETHERTYPE_VINESECHO	0x0BAF	/* Banyan VINES Echo */

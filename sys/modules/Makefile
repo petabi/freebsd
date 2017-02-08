@@ -314,6 +314,7 @@ SUBDIR=	\
 	${_rdma} \
 	${_rdrand_rng} \
 	re \
+	regorus \
 	rl \
 	rtwn \
 	${_rtwnfw} \
