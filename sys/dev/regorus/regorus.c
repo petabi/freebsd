@@ -32,6 +32,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/mbuf.h>
 #include <sys/socket.h>
 #include <sys/sockio.h>
+#include <sys/conf.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/callout.h>
@@ -56,8 +57,9 @@ __FBSDID("$FreeBSD$");
 #include <netinet/in_var.h>
 #include <netinet/if_ether.h>
 
-static void	regorus_handler(struct mbuf *);
+static void regorus_handler(struct mbuf *);
 
+static const uint8_t regorus_etheraddr[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff }; /* TODO */
 static const struct netisr_handler regorus_nh = {
 	.nh_name = "regorus",
 	.nh_handler = regorus_handler,
@@ -65,18 +67,157 @@ static const struct netisr_handler regorus_nh = {
 	.nh_policy = NETISR_POLICY_SOURCE,
 };
 
+LIST_HEAD(, regorus_card) card_list;
+static struct mtx card_list_mtx;
+static struct mtx cdev_mtx;
+
+static struct cdev *regorus_dev; /* /dev/regorus character device. */
+
+static void regorus_transmit(struct regorus_card *);
+static void regorus_timer(void *);
+
+static int regorus_open(struct cdev *dev, int oflags, int devtype, struct thread *td);
+static int regorus_ioctl(struct cdev *dev, u_long cmd, caddr_t data,
+	int fflag, struct thread *td);
+static int regorus_close(struct cdev *dev, int fflag, int devtype, struct thread *td);
+struct cdevsw regorus_cdevsw = {
+	.d_version = D_VERSION,
+	.d_name = "regorus",
+	.d_open = regorus_open,
+	.d_ioctl = regorus_ioctl,
+	.d_close = regorus_close,
+};
+
+static int
+regorus_open(struct cdev *dev, int oflags, int devtype, struct thread *td)
+{
+	int error = 0;
+
+	(void)dev;
+	(void)oflags;
+	(void)devtype;
+	(void)td;
+
+	printf("regorus cdev open\n");
+	/* TODO : do we need priv structure? */
+	/*
+	error = devfs_set_cdevpriv(priv, regorus_dtor);
+	if (error) {
+		free(priv, M_DEVBUF);
+	}
+	*/
+	return error;
+}
+
+static int
+regorus_ioctl(struct cdev *dev, u_long cmd, caddr_t data,
+	int fflag, struct thread *td)
+{
+	int error = 0;
+	struct regorus_req *req = (struct regorus_req *) data;
+	struct regorus_card *card;
+	int found = 0;
+
+	switch (cmd) {
+	case RIOCPROBE:
+		/*
+		 * Check if the requested interface
+		 * already registered a regorus card.
+		 * If not, start probing.
+		 * User is expected to check the result later
+		 */
+		mtx_lock(&card_list_mtx);
+		LIST_FOREACH(card, &card_list, card_list) {
+			if (strcmp(card->ifname, req->ifname) == 0) {
+				found = 1;
+				break;
+			}
+		}
+		req->found = found;
+		if (found) {
+			req->status = card->status;
+		} else { /* register one & start probing */
+			/* First check if the requested interface exists */
+			struct ifnet *ifp = NULL;
+			ifp = ifunit_ref(req->ifname);
+			if (ifp == NULL) {
+				error = ENXIO; /* TODO : check value */
+			} else {
+				/* Start setting up card related info to register
+				 * and start probing by transmitting probing packet
+				 */
+				card = malloc(sizeof(*card), M_DEVBUF, M_WAITOK|M_ZERO);
+				mtx_init(&card->lock, "regorus_card", NULL, MTX_DEF);
+				callout_init_mtx(&card->timer, &card->lock, 0);
+
+				mtx_lock(&card->lock);
+				card->ifp = ifp;
+				regorus_transmit(card); /* TODO : specify type */
+				mtx_unlock(&card->lock);
+				callout_reset(&card->timer, hz, regorus_timer, card);
+
+				LIST_INSERT_HEAD(&card_list, card, card_list);
+				req->status = REGORUS_CARD_DETECTING;
+			}
+		}
+		mtx_unlock(&card_list_mtx);
+		break;
+	case RIOCCONFIG:
+		/* TODO */
+		break;
+	default:
+		break;
+	}
+	return error;
+}
+
+static int
+regorus_close(struct cdev *dev, int fflag, int devtype, struct thread *td)
+{
+	printf("regorus cdev closing\n");
+	return 0;
+}
+
+static int regorus_init()
+{
+	int error = 0;
+	/* Initialize data */
+	mtx_init(&card_list_mtx, "regorus card list", NULL, MTX_DEF);
+	LIST_INIT(&card_list);
+	mtx_init(&cdev_mtx, "regorus cdev", NULL, MTX_DEF);
+
+	regorus_dev = make_dev(&regorus_cdevsw, 0, UID_ROOT, GID_WHEEL, 0600, "regorus");
+	if (!regorus_dev) {
+		error = EINVAL;
+		goto fail;
+	}
+
+	/* RX handler */
+	netisr_register(&regorus_nh);
+	printf("regorus_modevent regorus_nh registered\n");
+	return error;
+fail:
+	return error;
+}
+
+static int regorus_fini()
+{
+	// TODO : list clean-up?
+	mtx_destroy(&card_list_mtx);
+	mtx_destroy(&cdev_mtx);
+	return 0;
+}
+
 static int
 regorus_modevent(module_t mod, int type, void *data)
 {
 	int error = 0;
 	switch (type) {
 	case MOD_LOAD:
-		/*TODO error = regorus_init();*/
-		netisr_register(&regorus_nh);
-		printf("regorus_modevent regorus_nh registered\n");
+		error = regorus_init();
 		break;
 	case MOD_UNLOAD:
-		/* TODO : regorus_fini() */
+		error = regorus_fini();
 		break;
 	default:
 		return (EOPNOTSUPP);
@@ -94,6 +235,9 @@ DECLARE_MODULE(regorus, regorus_mod, SI_SUB_DRIVERS, SI_ORDER_MIDDLE);
 /*DEV_MODULE(regorus, regorus_modevent, NULL);*/
 MODULE_VERSION(regorus, 1);
 
+/*
+ * Regorus rx side packet handler
+ */
 static void
 regorus_handler(struct mbuf *m)
 {
@@ -124,4 +268,41 @@ regorus_handler(struct mbuf *m)
 		break;
 	}
 	m_freem(m);
+}
+
+/* TODO : specify type */
+
+static void
+regorus_transmit(struct regorus_card *card)
+{
+	/* TODO : lock assert */
+	struct ifnet *ifp = card->ifp;
+	struct ether_header *eh;
+	struct regorushdr rh;
+	struct mbuf *m;
+
+	if ((ifp->if_drv_flags & IFF_DRV_RUNNING) == 0) /* TODO */
+		return;
+
+	m = m_gethdr(M_NOWAIT, MT_DATA);
+	if (m == NULL)
+		return;
+
+	eh = mtod(m, struct ether_header *);
+	memcpy(eh->ether_shost, IF_LLADDR(ifp), ETHER_ADDR_LEN);
+	memcpy(eh->ether_dhost, regorus_etheraddr, ETHER_ADDR_LEN);
+	eh->ether_type = htons(ETHERTYPE_REGORUS);
+
+	/* TODO : generality */
+	rh.op = REGORUS_PING;
+	m->m_pkthdr.len = sizeof(*eh) + sizeof(rh);
+	memcpy(mtod(m, caddr_t) + sizeof(*eh), &rh, sizeof(rh));
+
+	m->m_pkthdr.rcvif = ifp;
+	m->m_len = m->m_pkthdr.len;
+	ifp->if_transmit(ifp, m);
+}
+
+static void	regorus_timer(void *arg)
+{
 }
