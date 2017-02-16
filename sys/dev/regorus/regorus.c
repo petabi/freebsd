@@ -50,7 +50,7 @@ __FBSDID("$FreeBSD$");
 #include <net/if_media.h>
 #include <net/vnet.h>
 #include <net/netisr.h>
-#include <net/regorus.h>
+#include <net/regorus_internal.h>
 
 #include <netinet/in.h>
 #include <netinet/in_systm.h>

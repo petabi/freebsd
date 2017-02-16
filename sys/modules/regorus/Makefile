@@ -7,6 +7,6 @@
 .PATH.h: ${.CURDIR}/../../net
 CFLAGS += -I${.CURDIR}/../../
 KMOD	= regorus
-SRCS	= regorus.c regorus.h
+SRCS	= regorus.c regorus.h regorus_internal.h
 
 .include <bsd.kmod.mk>
