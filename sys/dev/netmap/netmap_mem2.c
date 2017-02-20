@@ -874,6 +874,7 @@ netmap_reset_obj_allocator(struct netmap_obj_pool *p)
 	p->memtotal = 0;
 	p->numclusters = 0;
 	p->objfree = 0;
+	p->_numdoublefree = 0; /* Petabi */
 }
 
 /*
