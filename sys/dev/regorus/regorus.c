@@ -57,24 +57,30 @@ __FBSDID("$FreeBSD$");
 #include <netinet/in_var.h>
 #include <netinet/if_ether.h>
 
-static void regorus_handler(struct mbuf *);
+static void regorus_rx_handler(struct mbuf *);
 
 static const uint8_t regorus_etheraddr[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff }; /* TODO */
 static const struct netisr_handler regorus_nh = {
 	.nh_name = "regorus",
-	.nh_handler = regorus_handler,
+	.nh_handler = regorus_rx_handler,
 	.nh_proto = NETISR_REGORUS,
 	.nh_policy = NETISR_POLICY_SOURCE,
 };
 
 LIST_HEAD(, regorus_card) card_list;
-static struct mtx card_list_mtx;
-static struct mtx cdev_mtx;
+static struct mtx card_mtx;
+static struct regorus_task regorus_task;
 
 static struct cdev *regorus_dev; /* /dev/regorus character device. */
 
-static void regorus_transmit(struct regorus_card *);
+static void regorus_transmit_probe(struct regorus_card *);
 static void regorus_timer(void *);
+
+
+static int regorus_card_create(const char *ifname);
+static int regorus_task_init(struct regorus_task *task);
+static void regorus_task_add(int kind, struct regorus_card *card, struct ifnet *ifp, struct regorushdr *pkt);
+
 
 static int regorus_open(struct cdev *dev, int oflags, int devtype, struct thread *td);
 static int regorus_ioctl(struct cdev *dev, u_long cmd, caddr_t data,
@@ -126,9 +132,9 @@ regorus_ioctl(struct cdev *dev, u_long cmd, caddr_t data,
 		 * If not, start probing.
 		 * User is expected to check the result later
 		 */
-		mtx_lock(&card_list_mtx);
+		mtx_lock(&card_mtx);
 		LIST_FOREACH(card, &card_list, card_list) {
-			if (strcmp(card->ifname, req->ifname) == 0) {
+			if (strncmp(card->ifname, req->ifname, IFNAMSIZ) == 0) {
 				found = 1;
 				break;
 			}
@@ -137,30 +143,15 @@ regorus_ioctl(struct cdev *dev, u_long cmd, caddr_t data,
 		if (found) {
 			req->status = card->status;
 		} else { /* register one & start probing */
-			/* First check if the requested interface exists */
-			struct ifnet *ifp = NULL;
-			ifp = ifunit_ref(req->ifname);
-			if (ifp == NULL) {
-				error = ENXIO; /* TODO : check value */
-			} else {
-				/* Start setting up card related info to register
-				 * and start probing by transmitting probing packet
-				 */
-				card = malloc(sizeof(*card), M_DEVBUF, M_WAITOK|M_ZERO);
-				mtx_init(&card->lock, "regorus_card", NULL, MTX_DEF);
-				callout_init_mtx(&card->timer, &card->lock, 0);
-
-				mtx_lock(&card->lock);
-				card->ifp = ifp;
-				regorus_transmit(card); /* TODO : specify type */
-				mtx_unlock(&card->lock);
-				callout_reset(&card->timer, hz, regorus_timer, card);
-
-				LIST_INSERT_HEAD(&card_list, card, card_list);
-				req->status = REGORUS_CARD_DETECTING;
-			}
+			/*
+			 * regorus_card_create will create a card strcture
+			 * and insert it into card list
+			 * and then start probing
+			 */
+			/* TODO : check return */
+			regorus_card_create(req->ifname);
 		}
-		mtx_unlock(&card_list_mtx);
+		mtx_unlock(&card_mtx);
 		break;
 	case RIOCCONFIG:
 		/* TODO */
@@ -182,9 +173,9 @@ static int regorus_init()
 {
 	int error = 0;
 	/* Initialize data */
-	mtx_init(&card_list_mtx, "regorus card list", NULL, MTX_DEF);
+	mtx_init(&card_mtx, "regorus card list", NULL, MTX_DEF);
 	LIST_INIT(&card_list);
-	mtx_init(&cdev_mtx, "regorus cdev", NULL, MTX_DEF);
+	regorus_task_init(&regorus_task);
 
 	regorus_dev = make_dev(&regorus_cdevsw, 0, UID_ROOT, GID_WHEEL, 0600, "regorus");
 	if (!regorus_dev) {
@@ -203,8 +194,7 @@ fail:
 static int regorus_fini()
 {
 	// TODO : list clean-up?
-	mtx_destroy(&card_list_mtx);
-	mtx_destroy(&cdev_mtx);
+	mtx_destroy(&card_mtx);
 	return 0;
 }
 
@@ -239,9 +229,10 @@ MODULE_VERSION(regorus, 1);
  * Regorus rx side packet handler
  */
 static void
-regorus_handler(struct mbuf *m)
+regorus_rx_handler(struct mbuf *m)
 {
 	struct regorushdr *rr;
+	struct regorushdr *regpkt;
 	struct ifnet *ifp = m->m_pkthdr.rcvif;
 
 	printf("REGORUS packet received on %s\n", if_name(ifp));
@@ -252,12 +243,18 @@ regorus_handler(struct mbuf *m)
 		return;
 	}
 	rr = mtod(m, struct regorushdr *);
+	regpkt = malloc(sizeof(*regpkt), M_DEVBUF, M_NOWAIT|M_ZERO);
+	memcpy(regpkt, rr, sizeof(*regpkt));
 
 	switch(ntohs(rr->op)) {
 	case REGORUS_PING:
+		if_ref(ifp);
+		regorus_task_add(REGORUS_WORK_PROBE_RX, NULL, ifp, regpkt);
 		printf("REGORUS_PING received (info : 0x%x)\n", rr->info);
 		break;
 	case REGORUS_PONG:
+		if_ref(ifp); /* TODO : ifnet list lock? */
+		regorus_task_add(REGORUS_WORK_ACK_RX, NULL, ifp, regpkt);
 		printf("REGORUS_PONG received (info : 0x%x)\n", rr->info);
 		break;
 	case REGORUS_REQ:
@@ -270,10 +267,36 @@ regorus_handler(struct mbuf *m)
 	m_freem(m);
 }
 
-/* TODO : specify type */
+/* TODO : aggregation? */
 
 static void
-regorus_transmit(struct regorus_card *card)
+regorus_transmit_ack(struct ifnet *ifp)
+{
+	struct regorushdr rh;
+	struct ether_header *eh;
+	struct mbuf *m;
+	if (!ifp || (ifp->if_drv_flags & IFF_DRV_RUNNING) == 0) /* TODO */
+		return;
+	m = m_gethdr(M_NOWAIT, MT_DATA);
+	if (m == NULL)
+		return;
+
+	eh = mtod(m, struct ether_header *);
+	memcpy(eh->ether_shost, IF_LLADDR(ifp), ETHER_ADDR_LEN);
+	memcpy(eh->ether_dhost, regorus_etheraddr, ETHER_ADDR_LEN);
+	eh->ether_type = htons(ETHERTYPE_REGORUS);
+
+	rh.op = REGORUS_PONG;
+	m->m_pkthdr.len = sizeof(*eh) + sizeof(rh);
+	memcpy(mtod(m, caddr_t) + sizeof(*eh), &rh, sizeof(rh));
+
+	m->m_pkthdr.rcvif = ifp;
+	m->m_len = m->m_pkthdr.len;
+	ifp->if_transmit(ifp, m);
+}
+
+static void
+regorus_transmit_probe(struct regorus_card *card)
 {
 	/* TODO : lock assert */
 	struct ifnet *ifp = card->ifp;
@@ -293,7 +316,6 @@ regorus_transmit(struct regorus_card *card)
 	memcpy(eh->ether_dhost, regorus_etheraddr, ETHER_ADDR_LEN);
 	eh->ether_type = htons(ETHERTYPE_REGORUS);
 
-	/* TODO : generality */
 	rh.op = REGORUS_PING;
 	m->m_pkthdr.len = sizeof(*eh) + sizeof(rh);
 	memcpy(mtod(m, caddr_t) + sizeof(*eh), &rh, sizeof(rh));
@@ -303,6 +325,207 @@ regorus_transmit(struct regorus_card *card)
 	ifp->if_transmit(ifp, m);
 }
 
-static void	regorus_timer(void *arg)
+static void regorus_timer(void *arg)
 {
+	/* TODO : cardmtx ownership assertion */
+	struct regorus_card *card = (struct regorus_card *) arg;
+	mtx_lock(&card_mtx);
+	card->ref_count++; /* for reference in work : TODO atomic? */
+
+	regorus_task_add(REGORUS_WORK_PROBE, card, NULL, NULL);
+
+	card->ref_count--; /* my self : TODO atomic? */
+	mtx_unlock(&card_mtx);
+}
+
+/* Regorus card handling */
+static int regorus_card_create(const char *ifname)
+{
+	/* TODO : card_mtx should be asserted to be owned */
+	int error = 0;
+	struct ifnet *ifp = NULL;
+	struct regorus_card *card = NULL;
+	ifp = ifunit_ref(ifname);
+	if (ifp == NULL) {
+		error = ENXIO; /* TODO : check value */
+	} else {
+		/* Start setting up card related info to register
+		 * and start probing by transmitting probing packet
+		 */
+		card = malloc(sizeof(*card), M_DEVBUF, M_WAITOK|M_ZERO);
+		strcpy(card->ifname, ifname); /* TODO */
+		card->ifp = ifp; /* We should unref this when cleaning up */
+		card->status = REGORUS_CARD_DETECTING;
+		card->ref_count++; /* TODO : atomic inc */
+		card->retry_count = REGORUS_PROBE_RETRY;
+		callout_init(&card->timer, 0);
+		LIST_INSERT_HEAD(&card_list, card, card_list);
+
+		/* set up work and enqueue it and run the task */
+		card->ref_count++; /* for reference in work */
+
+		regorus_task_add(REGORUS_WORK_PROBE, card, NULL, NULL);
+	}
+	return error;
+}
+
+/* Regorus task related */
+
+static int regorus_process_probe(struct regorus_card *card)
+{
+	/* TODO : be specific with return value */
+
+	if (!card)
+		return -1;
+
+	mtx_lock(&card_mtx);
+	if (card->status != REGORUS_CARD_DETECTING)
+		return -1;
+
+	if (card->retry_count <= 0) {
+		card->retry_count = 0;
+		return -1;
+	}
+
+	regorus_transmit_probe(card); /* TODO : specify type */
+
+	card->ref_count++; // for timer
+	mtx_unlock(&card_mtx);
+	/* TODO : check if already running ? */
+	callout_reset(&card->timer, hz, regorus_timer, card);
+
+	return 0;
+}
+
+static int regorus_process_ack_rx(struct ifnet *ifp, struct regorushdr *pkt)
+{
+	/* TODO : be specific with return value */
+	struct regorus_card *card = NULL;
+	int found = 0;
+
+	if (!ifp)
+		return -1;
+
+	mtx_lock(&card_mtx);
+	LIST_FOREACH(card, &card_list, card_list) {
+		if (strncmp(card->ifname, ifp->if_xname, IFNAMSIZ) == 0) {
+			found = 1;
+			break;
+		}
+	}
+	if (!found) { /* TODO */
+		mtx_unlock(&card_mtx);
+		return -1;
+	}
+
+	/* stop timer if any TODO */
+	callout_stop(&card->timer);
+	card->status = REGORUS_CARD_DETECTED;
+	mtx_unlock(&card_mtx);
+	return 0;
+}
+
+static int regorus_process_probe_rx(struct ifnet *ifp, struct regorushdr *pkt)
+{
+	/* TODO : be specific with return value */
+	struct regorus_card *card = NULL;
+	int found = 0;
+
+	if (!ifp)
+		return -1;
+
+	regorus_transmit_ack(ifp);
+	mtx_lock(&card_mtx);
+	LIST_FOREACH(card, &card_list, card_list) {
+		if (strncmp(card->ifname, ifp->if_xname, IFNAMSIZ) == 0) {
+			found = 1;
+			break;
+		}
+	}
+	if (!found) { /* TODO */
+		mtx_unlock(&card_mtx);
+		return -1;
+	}
+
+	/* stop timer if any TODO */
+	callout_stop(&card->timer);
+	card->status = REGORUS_CARD_DETECTED;
+	mtx_unlock(&card_mtx);
+	return 0;
+}
+
+
+/* A func to be executed when a regorus task enqueued
+ * (basically this serves as a dispatcher)
+ */
+static void regorus_process_work(void *arg, int pending __unused)
+{
+	struct regorus_task *task = (struct regorus_task *) arg;
+	struct regorus_work *work = NULL;
+
+	while (1) {
+		/* get next work */
+		mtx_lock(&task->queue_lock);
+		work = STAILQ_FIRST(&task->head);
+		if (work) {
+			STAILQ_REMOVE_HEAD(&task->head, work_list);
+		}
+		mtx_unlock(&task->queue_lock);
+		if (!work)
+			break;
+
+		/* process the work */
+		switch (work->kind) {
+			case REGORUS_WORK_PROBE:
+				regorus_process_probe(work->card);
+				break;
+			case REGORUS_WORK_PROBE_RX:
+				regorus_process_probe_rx(work->ifp, work->pkt);
+				break;
+			case REGORUS_WORK_ACK_RX:
+				regorus_process_ack_rx(work->ifp, work->pkt);
+				break;
+			default:
+				/* TODO */
+				break;
+		}
+
+		/* clean-up the work */
+		if (work->card) {
+			mtx_lock(&card_mtx);
+			work->card->ref_count--; // TODO : atomic
+			mtx_unlock(&card_mtx);
+		}
+		if (work->ifp) {
+			if_rele(work->ifp); /* TODO : ifnet list lock?? */
+		}
+		if (work->pkt) {
+			free(work->pkt, M_DEVBUF);
+		}
+		free(work, M_DEVBUF);
+	}
+}
+
+static int regorus_task_init(struct regorus_task *task)
+{
+	/* TODO */
+	mtx_init(&task->queue_lock, "regorus task queue", NULL, MTX_DEF);
+	STAILQ_INIT(&task->head);
+	TASK_INIT(&task->task, 0, regorus_process_work, task);
+	return 0;
+}
+
+static void regorus_task_add(int kind, struct regorus_card *card, struct ifnet *ifp, struct regorushdr *pkt)
+{
+	struct regorus_work *work;
+	work = malloc(sizeof(*work), M_DEVBUF, M_NOWAIT|M_ZERO);
+	work->kind = kind;
+	work->card = card;
+	work->ifp = ifp;
+	work->pkt = pkt;
+
+	mtx_lock(&regorus_task.queue_lock);
+	STAILQ_INSERT_TAIL(&regorus_task.head, work, work_list);
+	mtx_unlock(&regorus_task.queue_lock);
+	taskqueue_enqueue(taskqueue_swi, &regorus_task.task);
 }
