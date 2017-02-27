@@ -358,7 +358,7 @@ static int regorus_card_create(const char *ifname)
 		card->status = REGORUS_CARD_DETECTING;
 		card->ref_count++; /* TODO : atomic inc */
 		card->retry_count = REGORUS_PROBE_RETRY;
-		callout_init(&card->timer, 0);
+		callout_init_mtx(&card->timer, &card_mtx, 0);
 		LIST_INSERT_HEAD(&card_list, card, card_list);
 
 		/* set up work and enqueue it and run the task */
@@ -386,13 +386,14 @@ static int regorus_process_probe(struct regorus_card *card)
 		card->retry_count = 0;
 		return -1;
 	}
+	card->retry_count--;
 
 	regorus_transmit_probe(card); /* TODO : specify type */
 
-	card->ref_count++; // for timer
-	mtx_unlock(&card_mtx);
+	card->ref_count++; // for timer TODO : atomic
 	/* TODO : check if already running ? */
 	callout_reset(&card->timer, hz, regorus_timer, card);
+	mtx_unlock(&card_mtx);
 
 	return 0;
 }
