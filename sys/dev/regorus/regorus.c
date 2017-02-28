@@ -79,6 +79,7 @@ static void regorus_timer(void *);
 
 static int regorus_card_create(const char *ifname);
 static int regorus_task_init(struct regorus_task *task);
+static int regorus_task_cleanup(struct regorus_task *task);
 static void regorus_task_add(int kind, struct regorus_card *card, struct ifnet *ifp, struct regorushdr *pkt);
 
 
@@ -193,7 +194,25 @@ fail:
 
 static int regorus_fini()
 {
-	// TODO : list clean-up?
+	struct regorus_card *card, *tmp;
+	if (regorus_dev)
+		destroy_dev(regorus_dev);
+	regorus_task_cleanup(&regorus_task);
+	mtx_lock(&card_mtx);
+	LIST_FOREACH_SAFE(card, &card_list, card_list, tmp) {
+		if (callout_stop(&card->timer) == 1)
+			card->ref_count--;
+		if (card->ifp)
+			if_rele(card->ifp);
+		card->ref_count--;
+		if (card->ref_count != 0)
+			printf("regorus_fini card ref_count %d\n", card->ref_count);
+		LIST_REMOVE(card, card_list);
+	}
+	mtx_unlock(&card_mtx);
+
+	/* TODO : what about netisr handler?? */
+
 	mtx_destroy(&card_mtx);
 	return 0;
 }
@@ -248,12 +267,10 @@ regorus_rx_handler(struct mbuf *m)
 
 	switch(ntohs(rr->op)) {
 	case REGORUS_PING:
-		if_ref(ifp);
 		regorus_task_add(REGORUS_WORK_PROBE_RX, NULL, ifp, regpkt);
 		printf("REGORUS_PING received (info : 0x%x)\n", rr->info);
 		break;
 	case REGORUS_PONG:
-		if_ref(ifp); /* TODO : ifnet list lock? */
 		regorus_task_add(REGORUS_WORK_ACK_RX, NULL, ifp, regpkt);
 		printf("REGORUS_PONG received (info : 0x%x)\n", rr->info);
 		break;
@@ -379,11 +396,14 @@ static int regorus_process_probe(struct regorus_card *card)
 		return -1;
 
 	mtx_lock(&card_mtx);
-	if (card->status != REGORUS_CARD_DETECTING)
+	if (card->status != REGORUS_CARD_DETECTING) {
+		mtx_unlock(&card_mtx);
 		return -1;
+	}
 
 	if (card->retry_count <= 0) {
 		card->retry_count = 0;
+		mtx_unlock(&card_mtx);
 		return -1;
 	}
 	card->retry_count--;
@@ -455,6 +475,21 @@ static int regorus_process_probe_rx(struct ifnet *ifp, struct regorushdr *pkt)
 	return 0;
 }
 
+static void regorus_work_cleanup(struct regorus_work *work)
+{
+	if (work->card) {
+		mtx_lock(&card_mtx);
+		work->card->ref_count--; // TODO : atomic
+		mtx_unlock(&card_mtx);
+	}
+	if (work->ifp) {
+		if_rele(work->ifp); /* TODO : ifnet list lock?? */
+	}
+	if (work->pkt) {
+		free(work->pkt, M_DEVBUF);
+	}
+	free(work, M_DEVBUF);
+}
 
 /* A func to be executed when a regorus task enqueued
  * (basically this serves as a dispatcher)
@@ -492,18 +527,7 @@ static void regorus_process_work(void *arg, int pending __unused)
 		}
 
 		/* clean-up the work */
-		if (work->card) {
-			mtx_lock(&card_mtx);
-			work->card->ref_count--; // TODO : atomic
-			mtx_unlock(&card_mtx);
-		}
-		if (work->ifp) {
-			if_rele(work->ifp); /* TODO : ifnet list lock?? */
-		}
-		if (work->pkt) {
-			free(work->pkt, M_DEVBUF);
-		}
-		free(work, M_DEVBUF);
+		regorus_work_cleanup(work);
 	}
 }
 
@@ -512,20 +536,44 @@ static int regorus_task_init(struct regorus_task *task)
 	/* TODO */
 	mtx_init(&task->queue_lock, "regorus task queue", NULL, MTX_DEF);
 	STAILQ_INIT(&task->head);
+	task->stop = 0;
 	TASK_INIT(&task->task, 0, regorus_process_work, task);
+	return 0;
+}
+
+static int regorus_task_cleanup(struct regorus_task *task)
+{
+	mtx_lock(&task->queue_lock);
+	task->stop = 1; // signal stop
+	while (!STAILQ_EMPTY(&task->head)) {
+		mtx_unlock(&task->queue_lock);
+		/* TODO a little bit spin?? */
+		mtx_lock(&task->queue_lock);
+	}
+	mtx_unlock(&task->queue_lock);
+	taskqueue_drain(taskqueue_swi, &task->task);
+        mtx_destroy(&task->queue_lock);
 	return 0;
 }
 
 static void regorus_task_add(int kind, struct regorus_card *card, struct ifnet *ifp, struct regorushdr *pkt)
 {
 	struct regorus_work *work;
+	mtx_lock(&regorus_task.queue_lock);
+	if (regorus_task.stop) { /* no more new job allowed */
+		mtx_unlock(&regorus_task.queue_lock);
+		printf("regorus_task_add job not queued (stop signalled)\n");
+		return;
+	}
 	work = malloc(sizeof(*work), M_DEVBUF, M_NOWAIT|M_ZERO);
 	work->kind = kind;
 	work->card = card;
-	work->ifp = ifp;
+	if (ifp) {
+		if_ref(ifp); /* TODO : ifnet list lock? */
+		work->ifp = ifp;
+	}
 	work->pkt = pkt;
 
-	mtx_lock(&regorus_task.queue_lock);
 	STAILQ_INSERT_TAIL(&regorus_task.head, work, work_list);
 	mtx_unlock(&regorus_task.queue_lock);
 	taskqueue_enqueue(taskqueue_swi, &regorus_task.task);

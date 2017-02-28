@@ -42,6 +42,7 @@ struct regorus_card {
 struct regorus_task {
 	struct task task;
 	struct mtx queue_lock; /* A lock used when enqueueing jobs */
+	int stop; /* for signalling stop */
 	STAILQ_HEAD(work_head, regorus_work) head;
 };
 
