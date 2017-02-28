@@ -80,7 +80,7 @@ static void regorus_timer(void *);
 static int regorus_card_create(const char *ifname);
 static int regorus_task_init(struct regorus_task *task);
 static int regorus_task_cleanup(struct regorus_task *task);
-static void regorus_task_add(int kind, struct regorus_card *card, struct ifnet *ifp, struct regorushdr *pkt);
+static int regorus_task_add(int kind, struct regorus_card *card, struct ifnet *ifp, struct regorushdr *pkt);
 
 
 static int regorus_open(struct cdev *dev, int oflags, int devtype, struct thread *td);
@@ -200,11 +200,12 @@ static int regorus_fini()
 	regorus_task_cleanup(&regorus_task);
 	mtx_lock(&card_mtx);
 	LIST_FOREACH_SAFE(card, &card_list, card_list, tmp) {
-		if (callout_stop(&card->timer) == 1)
-			card->ref_count--;
+		if (callout_stop(&card->timer) == 1) {
+			atomic_add_acq_int(&card->ref_count, -1);
+		}
 		if (card->ifp)
 			if_rele(card->ifp);
-		card->ref_count--;
+		atomic_add_acq_int(&card->ref_count, -1);
 		if (card->ref_count != 0)
 			printf("regorus_fini card ref_count %d\n", card->ref_count);
 		LIST_REMOVE(card, card_list);
@@ -347,11 +348,13 @@ static void regorus_timer(void *arg)
 	/* TODO : cardmtx ownership assertion */
 	struct regorus_card *card = (struct regorus_card *) arg;
 	mtx_lock(&card_mtx);
-	card->ref_count++; /* for reference in work : TODO atomic? */
+	atomic_add_acq_int(&card->ref_count, 1); /* for reference in work */
+	if (regorus_task_add(REGORUS_WORK_PROBE, card, NULL, NULL)) {
+		/* new work is not added somehow */
+		atomic_add_acq_int(&card->ref_count, -1);
+	}
 
-	regorus_task_add(REGORUS_WORK_PROBE, card, NULL, NULL);
-
-	card->ref_count--; /* my self : TODO atomic? */
+	atomic_add_acq_int(&card->ref_count, -1); /* reference is done */
 	mtx_unlock(&card_mtx);
 }
 
@@ -373,15 +376,17 @@ static int regorus_card_create(const char *ifname)
 		strcpy(card->ifname, ifname); /* TODO */
 		card->ifp = ifp; /* We should unref this when cleaning up */
 		card->status = REGORUS_CARD_DETECTING;
-		card->ref_count++; /* TODO : atomic inc */
+		atomic_add_acq_int(&card->ref_count, 1);
 		card->retry_count = REGORUS_PROBE_RETRY;
 		callout_init_mtx(&card->timer, &card_mtx, 0);
 		LIST_INSERT_HEAD(&card_list, card, card_list);
 
 		/* set up work and enqueue it and run the task */
-		card->ref_count++; /* for reference in work */
-
-		regorus_task_add(REGORUS_WORK_PROBE, card, NULL, NULL);
+		atomic_add_acq_int(&card->ref_count, 1); /* for reference in work */
+		if (regorus_task_add(REGORUS_WORK_PROBE, card, NULL, NULL)) {
+			/* new work is not added somehow */
+			atomic_add_acq_int(&card->ref_count, -1);
+		}
 	}
 	return error;
 }
@@ -410,8 +415,7 @@ static int regorus_process_probe(struct regorus_card *card)
 
 	regorus_transmit_probe(card); /* TODO : specify type */
 
-	card->ref_count++; // for timer TODO : atomic
-	/* TODO : check if already running ? */
+	atomic_add_acq_int(&card->ref_count, 1); /* for reference in timer */
 	callout_reset(&card->timer, hz, regorus_timer, card);
 	mtx_unlock(&card_mtx);
 
@@ -479,7 +483,7 @@ static void regorus_work_cleanup(struct regorus_work *work)
 {
 	if (work->card) {
 		mtx_lock(&card_mtx);
-		work->card->ref_count--; // TODO : atomic
+		atomic_add_acq_int(&work->card->ref_count, -1);
 		mtx_unlock(&card_mtx);
 	}
 	if (work->ifp) {
@@ -556,18 +560,19 @@ static int regorus_task_cleanup(struct regorus_task *task)
 	return 0;
 }
 
-static void regorus_task_add(int kind, struct regorus_card *card, struct ifnet *ifp, struct regorushdr *pkt)
+static int regorus_task_add(int kind, struct regorus_card *card, struct ifnet *ifp, struct regorushdr *pkt)
 {
 	struct regorus_work *work;
 	mtx_lock(&regorus_task.queue_lock);
 	if (regorus_task.stop) { /* no more new job allowed */
 		mtx_unlock(&regorus_task.queue_lock);
 		printf("regorus_task_add job not queued (stop signalled)\n");
-		return;
+		return -1;
 	}
 	work = malloc(sizeof(*work), M_DEVBUF, M_NOWAIT|M_ZERO);
 	work->kind = kind;
-	work->card = card;
+	if (card)
+		work->card = card;
 	if (ifp) {
 		if_ref(ifp); /* TODO : ifnet list lock? */
 		work->ifp = ifp;
@@ -577,4 +582,5 @@ static void regorus_task_add(int kind, struct regorus_card *card, struct ifnet *
 	STAILQ_INSERT_TAIL(&regorus_task.head, work, work_list);
 	mtx_unlock(&regorus_task.queue_lock);
 	taskqueue_enqueue(taskqueue_swi, &regorus_task.task);
+	return 0;
 }
