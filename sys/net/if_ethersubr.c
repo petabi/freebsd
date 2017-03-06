@@ -53,6 +53,7 @@
 #include <net/if_var.h>
 #include <net/if_arp.h>
 #include <net/netisr.h>
+#include <net/regorus_internal.h>
 #include <net/route.h>
 #include <net/if_llc.h>
 #include <net/if_dl.h>
@@ -683,11 +684,31 @@ static struct netisr_handler	ether_nh = {
 #endif
 };
 
+int regorus_ctl_cnt = 0;
+void (*regorus_handler)(struct mbuf *) = NULL;
+
+static void
+regorus_handler_wrapper(struct mbuf *m)
+{
+	if (atomic_cmpset_acq_int(&regorus_ctl_cnt, 1, 2)) { /* nonzero on success */
+		regorus_handler(m);
+		atomic_subtract_rel_int(&regorus_ctl_cnt, 1);
+	}
+}
+
+static struct netisr_handler	regorus_nh = {
+	.nh_name = "regorus",
+	.nh_handler = regorus_handler_wrapper,
+	.nh_proto = NETISR_REGORUS,
+	.nh_policy = NETISR_POLICY_SOURCE,
+};
+
 static void
 ether_init(__unused void *arg)
 {
 
 	netisr_register(&ether_nh);
+	netisr_register(&regorus_nh);
 }
 SYSINIT(ether, SI_SUB_INIT_IF, SI_ORDER_ANY, ether_init, NULL);
 

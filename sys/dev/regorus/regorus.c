@@ -57,15 +57,9 @@ __FBSDID("$FreeBSD$");
 #include <netinet/in_var.h>
 #include <netinet/if_ether.h>
 
-static void regorus_rx_handler(struct mbuf *);
+static void regorus_pkt_handler(struct mbuf *);
 
 static const uint8_t regorus_etheraddr[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff }; /* TODO */
-static const struct netisr_handler regorus_nh = {
-	.nh_name = "regorus",
-	.nh_handler = regorus_rx_handler,
-	.nh_proto = NETISR_REGORUS,
-	.nh_policy = NETISR_POLICY_SOURCE,
-};
 
 LIST_HEAD(, regorus_card) card_list;
 static struct mtx card_mtx;
@@ -185,7 +179,8 @@ static int regorus_init()
 	}
 
 	/* RX handler */
-	netisr_register(&regorus_nh);
+	regorus_handler = regorus_pkt_handler;
+	atomic_set_rel_int(&regorus_ctl_cnt, 1);
 	printf("regorus_modevent regorus_nh registered\n");
 	return error;
 fail:
@@ -195,6 +190,14 @@ fail:
 static int regorus_fini()
 {
 	struct regorus_card *card, *tmp;
+
+	/* First off, unregister regorus packet handler */
+	while (!atomic_cmpset_acq_int(&regorus_ctl_cnt, 1, 0)) {
+		/* regorus handler might be still in use */
+		cpu_spinwait(); /* spin */
+	}
+	regorus_handler = NULL;
+
 	if (regorus_dev)
 		destroy_dev(regorus_dev);
 	regorus_task_cleanup(&regorus_task);
@@ -211,8 +214,6 @@ static int regorus_fini()
 		LIST_REMOVE(card, card_list);
 	}
 	mtx_unlock(&card_mtx);
-
-	/* TODO : what about netisr handler?? */
 
 	mtx_destroy(&card_mtx);
 	return 0;
@@ -249,7 +250,7 @@ MODULE_VERSION(regorus, 1);
  * Regorus rx side packet handler
  */
 static void
-regorus_rx_handler(struct mbuf *m)
+regorus_pkt_handler(struct mbuf *m)
 {
 	struct regorushdr *rr;
 	struct regorushdr *regpkt;
@@ -551,7 +552,7 @@ static int regorus_task_cleanup(struct regorus_task *task)
 	task->stop = 1; // signal stop
 	while (!STAILQ_EMPTY(&task->head)) {
 		mtx_unlock(&task->queue_lock);
-		/* TODO a little bit spin?? */
+		tsleep(task, 0, "REGORUS_TASK_CLEANUP", 1);
 		mtx_lock(&task->queue_lock);
 	}
 	mtx_unlock(&task->queue_lock);
